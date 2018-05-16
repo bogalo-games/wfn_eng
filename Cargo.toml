@@ -1,0 +1,6 @@
+[package]
+name = "wfn_eng"
+version = "0.1.0"
+authors = ["Cerek Hillen <cerekh@gmail.com>"]
+
+[dependencies]
