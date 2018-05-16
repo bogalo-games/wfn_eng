@@ -17,6 +17,7 @@ use vulkano::device::Queue;
 
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::command_buffer::CommandBuffer;
+use vulkano::command_buffer::DynamicState;
 
 use vulkano::buffer::CpuAccessibleBuffer;
 use vulkano::buffer::BufferUsage;
@@ -28,7 +29,12 @@ use vulkano::format::Format;
 
 use vulkano::sync::GpuFuture;
 
+use vulkano::pipeline::viewport::Viewport;
+use vulkano::pipeline::GraphicsPipeline;
 use vulkano::pipeline::ComputePipeline;
+
+use vulkano::framebuffer::Framebuffer;
+use vulkano::framebuffer::Subpass;
 
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 
@@ -73,13 +79,6 @@ void main() {
 
     struct _Dummy;
 }
-
-
-#[derive(Copy, Clone)]
-struct Vertex {
-    position: [f32; 2]
-}
-impl_vertex!(Vertex, position);
 
 /// Creates a mandelbrot fractal via a compute shader, and then outputs it to
 /// image.png.
@@ -132,6 +131,143 @@ fn make_mandelbrot(device: Arc<Device>, queue: Arc<Queue>, dim: u32) {
 
 }
 
+/// Vertex shader for the graphics demo.
+mod vert {
+    #[derive(VulkanoShader)]
+    #[ty = "vertex"]
+    #[src = "
+#version 450
+
+layout(location = 0) in vec2 position;
+
+void main() {
+    gl_Position = vec4(position, 0.0, 1.0);
+}"]
+
+    struct _Dummy;
+}
+
+/// Fragment shader for the graphics demo.
+mod frag {
+    #[derive(VulkanoShader)]
+    #[ty = "fragment"]
+    #[src = "
+#version 450
+
+layout(location = 0) out vec4 f_color;
+
+void main() {
+    f_color = vec4(1.0, 0.0, 0.0, 1.0);
+}
+"]
+
+    struct _Dummy;
+}
+
+/// A vertex type, used for the graphics pipeline demo.
+#[derive(Copy, Clone)]
+struct Vertex {
+    position: [f32; 2]
+}
+impl_vertex!(Vertex, position);
+
+/// The graphics pipeline demo. We're going to render a triangle!
+fn graphics_pipeline(device: Arc<Device>, queue: Arc<Queue>, dim: u32) {
+    let image = StorageImage::new(
+        device.clone(),
+        Dimensions::Dim2d { width: dim, height: dim },
+        Format::R8G8B8A8Unorm,
+        Some(queue.family())
+    ).unwrap();
+
+    let vertices = vec![
+        Vertex { position: [ -0.5,  -0.5 ] },
+        Vertex { position: [  0.0,   0.5 ] },
+        Vertex { position: [  0.5, -0.25 ] }
+    ];
+
+    let vertex_buffer = CpuAccessibleBuffer::from_iter(
+        device.clone(),
+        BufferUsage::all(),
+        vertices.into_iter()
+    ).unwrap();
+
+    let vert_shader = vert::Shader::load(device.clone()).expect("Failed to create vertex shader");
+    let frag_shader = frag::Shader::load(device.clone()).expect("Failed to create fragment shader");
+
+    let render_pass = Arc::new(
+        single_pass_renderpass!(
+            device.clone(),
+            attachments: {
+                color: {
+                    load: Clear,
+                    store: Store,
+                    format: Format::R8G8B8A8Unorm,
+                    samples: 1,
+                }
+            },
+
+            pass: {
+                color: [color],
+                depth_stencil: {}
+            }
+        ).unwrap()
+    );
+
+    let framebuffer = Arc::new(
+        Framebuffer::start(render_pass.clone())
+            .add(image.clone()).unwrap()
+            .build().unwrap()
+    );
+
+    let pipeline = Arc::new(
+        GraphicsPipeline::start()
+            .vertex_input_single_buffer::<Vertex>()
+            .vertex_shader(vert_shader.main_entry_point(), ())
+            .viewports_dynamic_scissors_irrelevant(1)
+            .fragment_shader(frag_shader.main_entry_point(), ())
+            .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+            .build(device.clone())
+            .unwrap()
+    );
+
+    let dynamic_state = DynamicState {
+        viewports: Some(vec![Viewport {
+            origin: [0.0, 0.0],
+            dimensions: [ dim as f32, dim as f32 ],
+            depth_range: 0.0 .. 1.0
+        }]),
+
+        .. DynamicState::none()
+    };
+
+    let buf = CpuAccessibleBuffer::from_iter(
+        device.clone(),
+        BufferUsage::all(),
+        (0 .. dim * dim * 4).map(|_| 0u8)
+    ).unwrap();
+
+
+    let command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(
+        device.clone(),
+        queue.family()
+    ).unwrap()
+        .begin_render_pass(framebuffer.clone(), false, vec![[0.1, 0.1, 0.1, 1.0].into()]).unwrap()
+        .draw(pipeline.clone(), dynamic_state, vertex_buffer.clone(), (), ()).unwrap()
+        .end_render_pass().unwrap()
+        
+        .copy_image_to_buffer(image.clone(), buf.clone()).unwrap()
+        .build().unwrap();
+
+    let finished = command_buffer.execute(queue.clone()).unwrap();
+    finished.then_signal_fence_and_flush().unwrap().wait(None).unwrap();
+
+    let buffer_content = buf.read().unwrap();
+    let image = ImageBuffer::<Rgba<u8>, _>::from_raw(dim, dim, &buffer_content[..]).unwrap();
+    image.save("triangle.png").unwrap();
+}
+
+/// Entry point to the application.
 fn main() {
     //
     // Setting up the context.
@@ -161,4 +297,5 @@ fn main() {
     // Messing around
     //
     make_mandelbrot(device.clone(), queue.clone(), 512);
+    graphics_pipeline(device.clone(), queue.clone(), 512);
 }
