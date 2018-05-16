@@ -4,3 +4,4 @@ version = "0.1.0"
 authors = ["Cerek Hillen <cerekh@gmail.com>"]
 
 [dependencies]
+vulkano = "0.9"
