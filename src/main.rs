@@ -153,11 +153,25 @@ fn windowing(physical: PhysicalDevice, instance: Arc<Instance>) {
         device.clone(),
         BufferUsage::all(),
         [
-            Vertex { position: [  -0.5, -0.25 ] },
-            Vertex { position: [   0.0,  0.5  ] },
-            Vertex { position: [  0.25, -0.1  ] },
+            Vertex { position: [ -0.5,  0.5 ] },
+            Vertex { position: [ -0.5, -0.5 ] },
+            Vertex { position: [  0.5,  0.5 ] },
+            Vertex { position: [  0.5, -0.5 ] }
         ].iter().cloned()
-    ).expect("Failed to create buffer");
+    ).expect("Failed to create vertex buffer");
+
+    let uv_buffer = CpuAccessibleBuffer::from_iter(
+        device.clone(),
+        BufferUsage::all(),
+        [
+            Vertex { position: [ -1.0,  1.0 ] },
+            Vertex { position: [ -1.0, -1.0 ] },
+            Vertex { position: [  1.0,  1.0 ] },
+            Vertex { position: [  1.0, -1.0 ] }
+        ].iter().cloned()
+    ).expect("Failed to create UV buffer");
+
+    let texture = tex::load_texture(device.clone(), queue.clone(), tex::NO_TEX_PATH);
 
     let vert = vert::Shader::load(device.clone()).unwrap();
     let frag = frag::Shader::load(device.clone()).unwrap();
@@ -185,7 +199,7 @@ fn windowing(physical: PhysicalDevice, instance: Arc<Instance>) {
         GraphicsPipeline::start()
             .vertex_input_single_buffer::<Vertex>()
             .vertex_shader(vert.main_entry_point(), ())
-            .triangle_list()
+            .triangle_strip()
             .viewports_dynamic_scissors_irrelevant(1)
             .fragment_shader(frag.main_entry_point(), ())
             .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
@@ -194,7 +208,6 @@ fn windowing(physical: PhysicalDevice, instance: Arc<Instance>) {
     );
 
     let mut framebuffers: Option<Vec<Arc<Framebuffer<_, _>>>> = None;
-
 
     let mut recreate_swapchain = false;
     let mut previous_frame_end = Box::new(now(device.clone())) as Box<GpuFuture>;

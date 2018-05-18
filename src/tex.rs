@@ -7,30 +7,20 @@ use vulkano::sync::GpuFuture;
 use std::sync::Arc;
 use image;
 
-static NO_TEX_PATH: &'static str = "res/notex.png";
+pub static NO_TEX_PATH: &'static str = "res/notex.png";
 
-fn load_texture(device: Arc<Device>, queue: Arc<Queue>, path: &'static str) -> Arc<StorageImage<Format>> {
+/// Given a Device and a Queue, produce a StorageImage filled with the contents
+/// of an image on disk.
+pub fn load_texture(device: Arc<Device>, queue: Arc<Queue>, path: &'static str) -> Arc<StorageImage<Format>> {
     let img = image::open(path).unwrap().to_rgba();
     let (width, height) = img.dimensions();
     let raw = img.into_raw();
 
-    let mut buf: Arc<CpuAccessibleBuffer<[u8]>>;
-    unsafe {
-        let unsafe_buf: Arc<CpuAccessibleBuffer<[u8]>> = CpuAccessibleBuffer::uninitialized_array(
-            device.clone(),
-            raw.len(),
-            BufferUsage::all()
-        ).unwrap();
-
-        let mut buffer_content = unsafe_buf.write().unwrap();
-        let mut n = 0;
-        for item in buffer_content.iter_mut() {
-            *item = raw[n];
-            n += 1;
-        }
-
-        buf = unsafe_buf.clone();
-    }
+    let buf = CpuAccessibleBuffer::from_iter(
+        device.clone(),
+        BufferUsage::all(),
+        raw.iter().cloned()
+    ).unwrap();
 
     let image = StorageImage::new(
         device.clone(),
