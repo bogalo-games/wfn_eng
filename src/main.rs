@@ -46,6 +46,8 @@ use winit::EventsLoop;
 use std::sync::Arc;
 use std::mem;
 
+mod tex;
+
 
 /// Vertex shader for the graphics demo.
 mod vert {
