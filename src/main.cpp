@@ -1,6 +1,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <vulkan/vulkan.h>
-#include <GLFW/glfw3.h>
+#include <SDL.h>
+#include <SDL_vulkan.h>
 
 #include <functional>
 #include <stdexcept>
@@ -39,14 +40,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     std::cerr << "Validation layer: " << msg << std::endl;
 
     return VK_FALSE;
-}
-
-////
-// glfwErrorHandler
-//
-// Prints errors raised by GLFW.
-static void glfwErrorHandler(int errCode, const char *desc) {
-    std::cerr << "GLFW Error (" << errCode << "): " << desc << std::endl;
 }
 
 ////
@@ -113,7 +106,7 @@ struct Instance {
     // makeInstance
     //
     // Creates a VkInstance.
-    void makeInstance() {
+    void makeInstance(SDL_Window *window) {
         if (!checkValidationLayerSupport())
             throw std::runtime_error("Validation layers requested but not found.");
 
@@ -131,16 +124,17 @@ struct Instance {
         createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
         createInfo.pApplicationInfo = &appInfo;
  
-        // Getting the set of required GLFW extensions.
-        uint32_t glfwExtensionCount = 0;
-        const char **glfwExtensions;
+        // Registering ALL the extensions!
+        uint32_t extensionCount;
+        if (!SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr))
+            throw std::runtime_error("Could not get required extension count");
 
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        if (glfwExtensionCount == 0 && glfwExtensions == nullptr)
-            throw std::runtime_error("Failed to collect required GLFW extensions.");
+        const char **pNames = new const char *[extensionCount];
+        if (!SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, pNames))
+            throw std::runtime_error("Could not get extensions.");
 
-        createInfo.enabledExtensionCount = glfwExtensionCount;
-        createInfo.ppEnabledExtensionNames = glfwExtensions;
+        createInfo.enabledExtensionCount = extensionCount;
+        createInfo.ppEnabledExtensionNames = pNames;
 
         // Adding validation layers
         if (enableValidationLayer) {
@@ -149,17 +143,6 @@ struct Instance {
         } else
             createInfo.enabledLayerCount = 0;
 
-        // Printing the available extensions, for fun and profit.
-        uint32_t extensionCount = 0;
-        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-
-        std::vector<VkExtensionProperties> extensions(extensionCount);
-        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-
-        std::cout << "Available extensions:" << std::endl;
-        for (const auto& ext: extensions)
-            std::cout << "  " << ext.extensionName << std::endl;
-        std::cout << std::endl;
 
         // Constructing the VkInstance
         VkResult result;
@@ -167,12 +150,14 @@ struct Instance {
             std::cerr << result << std::endl;
             throw std::runtime_error("Failed to create instance.");
         }
+
+        delete[] pNames;
     }
 
     VkInstance instance;
 
-    Instance() {
-        makeInstance();
+    Instance(SDL_Window *window) {
+        makeInstance(window);
     }
 
     ~Instance() {
@@ -330,15 +315,12 @@ struct Surface {
     VkInstance instance;
     VkSurfaceKHR surface;
 
-    void createSurface(VkInstance instance, GLFWwindow* window) {
-        VkResult result;
-        if ((result = glfwCreateWindowSurface(instance, window, nullptr, &surface)) != VK_SUCCESS) {
-            std::cerr << "Create surface result: " << result << std::endl;
-            throw std::runtime_error("Failed to create surface");
-        }
+    void createSurface(VkInstance instance, SDL_Window *window) {
+        if (!SDL_Vulkan_CreateSurface(window, instance, &surface))
+            throw std::runtime_error("Failed to build surface");
     }
 
-    Surface(VkInstance instance, GLFWwindow* window) {
+    Surface(VkInstance instance, SDL_Window* window) {
         this->instance = instance;
         createSurface(instance, window);
     }
@@ -350,7 +332,7 @@ struct Surface {
 
 class HelloTriangleApplication {
 private:
-    GLFWwindow *window;
+    SDL_Window *window;
 
     VkDebugReportCallbackEXT callback;
 
@@ -362,17 +344,16 @@ private:
     /////
     // GLFW
     void initWindow() {
-        glfwSetErrorCallback(&glfwErrorHandler);
-
-        if (glfwInit() == GLFW_FALSE)
-            throw std::runtime_error("Failed to initialize GLFW.");
-        if (glfwVulkanSupported() == GLFW_FALSE)
-            throw std::runtime_error("GLFW does not support Vulkan on this machine.");
-
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-        window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Test", nullptr, nullptr);
+        SDL_Init(SDL_INIT_EVERYTHING);
+        SDL_Vulkan_LoadLibrary("vulkan/macOS/lib/libvulkan.1.dylib");
+        window = SDL_CreateWindow(
+            "Testing Vulkan",
+            SDL_WINDOWPOS_UNDEFINED,
+            SDL_WINDOWPOS_UNDEFINED,
+            WIDTH,
+            HEIGHT,
+            SDL_WINDOW_VULKAN
+        );
     }
 
     ////
@@ -385,7 +366,6 @@ private:
         createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
         createInfo.pfnCallback = debugCallback;
 
-
         VkResult result;
         if ((result = CreateDebugReportCallbackEXT(instance->instance, &createInfo, nullptr, &callback)) != VK_SUCCESS) {
             std::cerr << "Debug callback status: " << result << std::endl;
@@ -394,7 +374,7 @@ private:
     }
 
     void initVulkan() {
-        instance = new Instance();
+        instance = new Instance(window);
         initDebug();
 
         surface = new Surface(instance->instance, window);
@@ -405,15 +385,24 @@ private:
     ////
     // Game Logic
     void mainLoop() {
-        while (!glfwWindowShouldClose(window)) {
-            glfwPollEvents();
+        bool quit = false;
+        SDL_Event event;
+
+        while (true) {
+            while (SDL_PollEvent(&event)) {
+                if (event.type == SDL_QUIT)
+                    quit = true;
+            }
+
+            if (quit == true)
+                break;
+            SDL_Delay(16);
         }
     }
 
     ////
     // Cleaning Up
     void cleanup() {
-
         delete surface;
         delete logical;
         delete physical;
@@ -422,8 +411,9 @@ private:
             DestroyDebugReportCallbackEXT(instance->instance, callback, nullptr);
         delete instance;
 
-        glfwDestroyWindow(window);
-        glfwTerminate();
+        SDL_DestroyWindow(window);
+        SDL_Vulkan_UnloadLibrary();
+        SDL_Quit();
     }
 
 public:
@@ -436,17 +426,6 @@ public:
 };
 
 int main() {
-    int major, minor, rev;
-    glfwGetVersion(&major, &minor, &rev);
-
-    std::cout << "GLFW Info:" << std::endl;
-    std::cout << "  GLFW (Header):  " << GLFW_VERSION_MAJOR << "."
-                                      << GLFW_VERSION_MINOR << "."
-                                      << GLFW_VERSION_REVISION << std::endl;
-    std::cout << "  GLFW (Library): " << major << "." << minor << "." << rev << std::endl;
-    std::cout << "  GLFW (String):  " << glfwGetVersionString() << std::endl;
-    std::cout << std::endl;
-
     HelloTriangleApplication app;
     try {
         app.run();
