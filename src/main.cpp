@@ -1,6 +1,6 @@
 #define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
+#include <GLFW/glfw3.h>
 
 #include <functional>
 #include <stdexcept>
@@ -41,6 +41,18 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     return VK_FALSE;
 }
 
+////
+// glfwErrorHandler
+//
+// Prints errors raised by GLFW.
+static void glfwErrorHandler(int errCode, const char *desc) {
+    std::cerr << "GLFW Error (" << errCode << "): " << desc << std::endl;
+}
+
+////
+// CreateDebugReportCallbackEXT
+//
+// Used to register the Vulkan validation layer with the application.
 VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback) {
     auto func = (PFN_vkCreateDebugReportCallbackEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
     if (func != nullptr) {
@@ -50,6 +62,10 @@ VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCa
     }
 }
 
+////
+// DestroyDEbugReportCallbackEXT
+//
+// Used to remove the Vulkan validation layer from the application.
 void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator) {
     auto func = (PFN_vkDestroyDebugReportCallbackEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
     if (func != nullptr) {
@@ -114,14 +130,14 @@ struct Instance {
         VkInstanceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
         createInfo.pApplicationInfo = &appInfo;
-        
-        // Collecting GLFW's required extensions.
+ 
+        // Getting the set of required GLFW extensions.
         uint32_t glfwExtensionCount = 0;
         const char **glfwExtensions;
 
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        if (glfwExtensions == nullptr || glfwExtensionCount == 0)
-            throw std::runtime_error("Vulkan is not available on this machine");
+        if (glfwExtensionCount == 0 && glfwExtensions == nullptr)
+            throw std::runtime_error("Failed to collect required GLFW extensions.");
 
         createInfo.enabledExtensionCount = glfwExtensionCount;
         createInfo.ppEnabledExtensionNames = glfwExtensions;
@@ -133,7 +149,7 @@ struct Instance {
         } else
             createInfo.enabledLayerCount = 0;
 
-        // Collecting the set of require extensions.
+        // Printing the available extensions, for fun and profit.
         uint32_t extensionCount = 0;
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 
@@ -213,8 +229,12 @@ struct Physical {
     //
     // Decides if a GPU is suitable.
     bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
+        VkPhysicalDeviceProperties deviceProperties;
+        vkGetPhysicalDeviceProperties(device, &deviceProperties);
+
         QueueFamily family(device, surface);
-        return family.isComplete();
+        return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+            family.isComplete();
     }
 
     ////
@@ -342,10 +362,12 @@ private:
     /////
     // GLFW
     void initWindow() {
-        glfwInit();
+        glfwSetErrorCallback(&glfwErrorHandler);
 
+        if (glfwInit() == GLFW_FALSE)
+            throw std::runtime_error("Failed to initialize GLFW.");
         if (glfwVulkanSupported() == GLFW_FALSE)
-            throw std::runtime_error("GLFW doesn't support Vulkan!");
+            throw std::runtime_error("GLFW does not support Vulkan on this machine.");
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
