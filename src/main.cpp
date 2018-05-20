@@ -13,9 +13,7 @@
 const int WIDTH  = 640;
 const int HEIGHT = 480;
 
-const std::vector<const char *> validationLayers = {
-    "VK_LAYER_LUNARG_standard_validation"
-};
+#define DEBUG
 
 #define NDEBUG
 #ifdef NDEBUG
@@ -71,6 +69,14 @@ void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT
 //
 // Utility class for creating a VkInstance.
 struct Instance {
+    const std::vector<const char *> validationLayers = {
+        "VK_LAYER_LUNARG_standard_validation"
+    };
+
+    ////
+    // checkValidationLayerSupport
+    //
+    // Checks if the application supports the required validation layers.
     bool checkValidationLayerSupport() {
         if (!enableValidationLayer)
             return true;
@@ -123,7 +129,7 @@ struct Instance {
         VkInstanceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
         createInfo.pApplicationInfo = &appInfo;
- 
+
         // Registering ALL the extensions!
         uint32_t extensionCount;
         if (!SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr))
@@ -205,10 +211,82 @@ struct QueueFamily {
 };
 
 ////
+// SwapChainSupport
+//
+// Provides information on the supported features for a VkPhysicalDevice.
+struct SwapChainSupport {
+    VkSurfaceCapabilitiesKHR capabilities;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
+
+    SwapChainSupport(VkPhysicalDevice physical, VkSurfaceKHR surface) {
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical, surface, &capabilities);
+
+        uint32_t formatCount;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physical, surface, &formatCount, nullptr);
+        if (formatCount > 0) {
+            formats.resize(formatCount);
+            vkGetPhysicalDeviceSurfaceFormatsKHR(physical, surface, &formatCount, formats.data());
+        }
+
+        uint32_t presentModeCount;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physical, surface, &presentModeCount, nullptr);
+        if (presentModeCount > 0) {
+            presentModes.resize(presentModeCount);
+            vkGetPhysicalDeviceSurfacePresentModesKHR(physical, surface, &presentModeCount, presentModes.data());
+        }
+    }
+
+    ////
+    // sufficient
+    //
+    // Checks whether the capabilities, formats, and presentModes are
+    // sufficient.
+    bool sufficient() {
+#ifdef DEBUG
+        std::cout << "  Formats:       " << formats.size() << std::endl;
+        std::cout << "  Present Modes: " << presentModes.size() << std::endl;
+#endif
+        return !formats.empty() && !presentModes.empty();
+    }
+};
+
+////
 // Physical
 //
 // Utility class for choosing a VkPhysicalDevice.
 struct Physical {
+    const std::vector<const char *> deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+
+    ////
+    // areExtensionsSupported
+    //
+    // Returns whether or not a device supports a given set of extensions.
+    bool areExtensionsSupported(VkPhysicalDevice device) {
+        uint32_t supExtCt;
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &supExtCt, nullptr);
+
+        std::vector<VkExtensionProperties> supExt(supExtCt);
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &supExtCt, supExt.data());
+
+#ifdef DEBUG
+        std::cout << "  Exts: " << std::endl;
+#endif
+
+        std::set<std::string> reqExt(deviceExtensions.begin(), deviceExtensions.end());
+        for (const auto& ext: supExt) {
+#ifdef DEBUG
+            std::cout << "    " << ext.extensionName << std::endl;
+#endif
+
+            reqExt.erase(ext.extensionName);
+        }
+
+        return reqExt.empty();
+    }
+
     /////
     // isDeviceSuitable
     //
@@ -217,9 +295,22 @@ struct Physical {
         VkPhysicalDeviceProperties deviceProperties;
         vkGetPhysicalDeviceProperties(device, &deviceProperties);
 
+#ifdef DEBUG
+        std::cout << "Device: " << deviceProperties.deviceName << std::endl;
+#endif
+
+        bool extSupport = areExtensionsSupported(device);
+        bool swapSupport = false;
+        if (extSupport) {
+            SwapChainSupport support(device, surface);
+            swapSupport = support.sufficient();
+        }
+
         QueueFamily family(device, surface);
         return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-            family.isComplete();
+            family.isComplete() &&
+            extSupport &&
+            swapSupport;
     }
 
     ////
@@ -310,7 +401,7 @@ struct Logical {
 ////
 // Surface
 //
-//
+// Provides a surface for the... thing to do a thing.
 struct Surface {
     VkInstance instance;
     VkSurfaceKHR surface;
@@ -330,6 +421,194 @@ struct Surface {
     }
 };
 
+////
+// SwapChain
+//
+// Builds the SwapChain!
+struct SwapChain {
+    ////
+    // chooseFormat
+    //
+    // Chooses a VkSurfaceFormatKHR given the set of available formats.
+    VkSurfaceFormatKHR chooseFormat() {
+        // If there is no preferred format, choose the best one.
+        if (support.formats.size() == 1 && support.formats[0].format == VK_FORMAT_UNDEFINED) {
+            return {
+                VK_FORMAT_B8G8R8A8_UNORM,
+                VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
+            };
+        }
+
+        // See if the best format is in the set of preferred formats.
+        for (const auto& format: support.formats) {
+            if (format.format == VK_FORMAT_B8G8R8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+                return format;
+        }
+
+        // Choose any old format.
+        return support.formats[0];
+    }
+
+    ////
+    // presentModeRanking
+    //
+    // Provides a ranking for VkPresentModeKHR such that we can choose the best
+    // one!
+    int presentModeRanking(VkPresentModeKHR presentMode) {
+        switch (presentMode) {
+        case VK_PRESENT_MODE_MAILBOX_KHR:
+            return 3;
+        case VK_PRESENT_MODE_FIFO_KHR:
+            return 2;
+        case VK_PRESENT_MODE_IMMEDIATE_KHR:
+            return 1;
+        default:
+            return 0;
+        };
+    }
+
+    ////
+    // choosePresentMode
+    //
+    // Chooses the VkPresentModeKHR given the set of available presentation
+    // modes.
+    VkPresentModeKHR choosePresentMode() {
+        VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
+        int bestModeRanking = -1;
+
+        for (const auto& presentMode: support.presentModes) {
+            int n = presentModeRanking(presentMode);
+            if (n > bestModeRanking) {
+                bestMode = presentMode;
+                bestModeRanking = n;
+            }
+        }
+
+        return bestMode;
+    }
+
+    ////
+    // chooseExtent
+    //
+    // Chooses the extent that best matches the extents of the SDL_Window.
+    VkExtent2D chooseExtent() {
+        if (support.capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+            return support.capabilities.currentExtent;
+        else {
+            VkExtent2D ext = { WIDTH, HEIGHT };
+
+            ext.width = std::max(
+                support.capabilities.minImageExtent.width,
+                std::min(
+                    support.capabilities.maxImageExtent.width,
+                    ext.width
+                )
+            );
+
+            ext.height = std::max(
+                support.capabilities.minImageExtent.height,
+                std::min(
+                    support.capabilities.maxImageExtent.height,
+                    ext.height
+                )
+            );
+
+            return ext;
+        }
+    }
+
+    void makeSwapChain(VkDevice device, VkSurfaceKHR surface) {
+        uint32_t imageCount = support.capabilities.minImageCount + 1;
+        if (support.capabilities.maxImageCount > 0 && imageCount > support.capabilities.maxImageCount)
+            imageCount = support.capabilities.maxImageCount;
+
+        VkSwapchainCreateInfoKHR createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        createInfo.surface = surface;
+        createInfo.minImageCount = imageCount;
+        createInfo.imageFormat = format.format;
+        createInfo.imageColorSpace = format.colorSpace;
+        createInfo.imageExtent = extent;
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+        VkResult result;
+        if ((result = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain)) != VK_SUCCESS) {
+          std::cerr << "Swapchain result: " << result << std::endl;
+          throw std::runtime_error("Failed to create swapchain");
+        }
+
+        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+        swapChainImages.resize(imageCount);
+        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+    }
+
+    SwapChainSupport support;
+
+    VkSurfaceFormatKHR format;
+    VkPresentModeKHR presentMode;
+    VkExtent2D extent;
+
+    VkDevice device;
+    VkSwapchainKHR swapChain;
+    std::vector<VkImage> swapChainImages;
+
+    SwapChain(VkPhysicalDevice physical, VkDevice device, VkSurfaceKHR surface) :
+            support(physical, surface) {
+        format = chooseFormat();
+        presentMode = choosePresentMode();
+        extent = chooseExtent();
+        makeSwapChain(device, surface);
+
+        this->device = device;
+    }
+
+    ~SwapChain() {
+        vkDestroySwapchainKHR(device, swapChain, nullptr);
+    }
+};
+
+struct ImageViews {
+    VkDevice device;
+    std::vector<VkImageView> imageViews;
+
+    void makeImageViews(VkDevice device, SwapChain *swapChain) {
+        imageViews.resize(swapChain->swapChainImages.size());
+        for (size_t i = 0; i < swapChain->swapChainImages.size(); i++) {
+            VkImageViewCreateInfo createInfo = {};
+            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            createInfo.image = swapChain->swapChainImages[i];
+            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            createInfo.format = swapChain->format.format;
+            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            createInfo.subresourceRange.baseMipLevel = 0;
+            createInfo.subresourceRange.levelCount = 1;
+            createInfo.subresourceRange.baseArrayLayer = 1;
+            createInfo.subresourceRange.layerCount = 1;
+
+            VkResult result;
+            if ((result = vkCreateImageView(device, &createInfo, nullptr, &imageViews[i])) != VK_SUCCESS) {
+                std::cerr << "Image view " << i << " result: " << result << std::endl;
+                throw std::runtime_error("Failed to create image view");
+            }
+        }
+    }
+
+    ImageViews(VkDevice device, SwapChain *swapChain) {
+        makeImageViews(device, swapChain);
+        this->device = device;
+    }
+
+    ~ImageViews() {
+        for (auto imageView: imageViews)
+            vkDestroyImageView(device, imageView, nullptr);
+    }
+};
+
 class HelloTriangleApplication {
 private:
     SDL_Window *window;
@@ -337,9 +616,11 @@ private:
     VkDebugReportCallbackEXT callback;
 
     Instance *instance;
+    Surface *surface;
     Physical *physical;
     Logical *logical;
-    Surface *surface;
+    SwapChain *swapChain;
+    ImageViews *imageViews;
 
     /////
     // GLFW
@@ -380,6 +661,8 @@ private:
         surface = new Surface(instance->instance, window);
         physical = new Physical(instance->instance, surface->surface);
         logical = new Logical(physical->physical, surface->surface);
+        swapChain = new SwapChain(physical->physical, logical->device, surface->surface);
+        imageViews = new ImageViews(logical->device, swapChain);
     }
 
     ////
@@ -403,6 +686,7 @@ private:
     ////
     // Cleaning Up
     void cleanup() {
+        delete swapChain;
         delete surface;
         delete logical;
         delete physical;
