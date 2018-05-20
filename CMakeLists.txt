@@ -19,7 +19,16 @@ include_directories(
     "${CMAKE_SOURCE_DIR}/vulkan/macOS/include"
 )
 
-add_executable(wfn_eng src/main.cpp)
+set(HEADERS
+  src/core.hpp
+)
+
+set(SOURCES
+  src/core.cpp
+  src/main.cpp
+)
+
+add_executable(wfn_eng ${SOURCES} ${HEADERS})
 
 target_link_libraries(
     wfn_eng
