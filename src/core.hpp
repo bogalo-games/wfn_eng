@@ -1,7 +1,10 @@
 #ifndef __WFN_ENG_CORE_HPP__
 #define __WFN_ENG_CORE_HPP__
 
+#include <vulkan/vulkan.h>
 #include <SDL.h>
+
+#include <vector>
 
 namespace wfn_eng {
     ////
@@ -32,9 +35,9 @@ namespace wfn_eng {
         VkPresentModeKHR surfacePresentMode;
         VkExtent2D surfaceExtent;
 
-        VkSwapChainKHR swapChain;
-        std::vector<Image> swapChainImages;
-        std::vector<ImageViews> imageViews;
+        VkSwapchainKHR swapChain;
+        std::vector<VkImage> swapChainImages;
+        std::vector<VkImageView> imageViews;
 
         ////
         // Core
