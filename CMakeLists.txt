@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 project(wfn_eng)
 
-set(CMAKE_CXX_FLAGS "-std=c++17 ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-std=c++17 -g -Wall ${CMAKE_CXX_FLAGS}")
 
 find_package(pkgconfig REQUIRED)
 
@@ -35,4 +35,9 @@ target_link_libraries(
     ${SDL2_LIBRARIES}
     MoltenVK
     vulkan
+)
+
+add_custom_command(TARGET ${PROJECT_NAME}
+    PRE_BUILD
+    COMMAND ./compile_shaders.sh
 )

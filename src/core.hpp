@@ -53,6 +53,12 @@ namespace wfn_eng {
         //
         // Frees all of the resources allocated by Vulkan.
         ~Core();
+
+        ////
+        // operator=
+        //
+        // Removing the assignment operator to follow the rule of threes.
+        Core& operator=(const Core&) = delete;
     };
 }
 
