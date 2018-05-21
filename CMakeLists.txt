@@ -21,6 +21,7 @@ include_directories(
 
 set(HEADERS
   src/vulkan.hpp
+  src/error.hpp
   src/sdl.hpp
 )
 
@@ -29,6 +30,7 @@ set(SOURCES
 
   src/sdl/window.cpp
 
+  src/error.cpp
   src/main.cpp
 )
 
