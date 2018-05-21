@@ -10,6 +10,8 @@
 #include <vector>
 #include <set>
 
+#include "sdl.hpp"
+
 const int WIDTH  = 640;
 const int HEIGHT = 480;
 
@@ -993,7 +995,7 @@ struct Semaphores {
 
 class HelloTriangleApplication {
 private:
-    SDL_Window *window;
+    wfn_eng::sdl::Window *window;
 
     VkDebugReportCallbackEXT callback;
 
@@ -1011,16 +1013,15 @@ private:
     /////
     // GLFW
     void initWindow() {
-        SDL_Init(SDL_INIT_EVERYTHING);
-        SDL_Vulkan_LoadLibrary("vulkan/macOS/lib/libvulkan.1.dylib");
-        window = SDL_CreateWindow(
-            "Testing Vulkan",
-            SDL_WINDOWPOS_UNDEFINED,
-            SDL_WINDOWPOS_UNDEFINED,
-            WIDTH,
-            HEIGHT,
-            SDL_WINDOW_VULKAN
-        );
+        wfn_eng::sdl::WindowConfig cfg {
+            .vulkanPath = "vulkan/macOS/lib/libvulkan.1.dylib",
+            .windowName = "Testing Vulkan",
+            .width = WIDTH,
+            .height = HEIGHT,
+            .flags = 0
+        };
+
+        window = new wfn_eng::sdl::Window(cfg);
     }
 
     ////
@@ -1041,10 +1042,10 @@ private:
     }
 
     void initVulkan() {
-        instance = new Instance(window);
+        instance = new Instance(window->ref());
         initDebug();
 
-        surface = new Surface(instance->instance, window);
+        surface = new Surface(instance->instance, window->ref());
         physical = new Physical(instance->instance, surface->surface);
         logical = new Logical(physical->physical, surface->surface);
         swapChain = new SwapChain(physical->physical, logical->device, surface->surface);
@@ -1137,9 +1138,7 @@ private:
             DestroyDebugReportCallbackEXT(instance->instance, callback, nullptr);
         delete instance;
 
-        SDL_DestroyWindow(window);
-        SDL_Vulkan_UnloadLibrary();
-        SDL_Quit();
+        delete window;
     }
 
 public:

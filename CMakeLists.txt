@@ -20,11 +20,12 @@ include_directories(
 )
 
 set(HEADERS
-  src/core.hpp
+  src/vulkan.hpp
+  src/sdl.hpp
 )
 
 set(SOURCES
-  src/core.cpp
+  src/sdl/window.cpp
   src/main.cpp
 )
 

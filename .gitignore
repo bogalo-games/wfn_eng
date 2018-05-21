@@ -5,3 +5,4 @@ cmake_install.cmake
 wfn_eng
 vulkan/
 *.spv
+!src/vulkan
