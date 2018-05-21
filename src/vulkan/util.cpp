@@ -27,7 +27,6 @@ namespace wfn_eng::vulkan::util {
             queueFamilies.data()
         );
 
-        int i = 0;
         for (int i = 0; i < queueFamilies.size(); i++) {
             if (queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
                 graphicsFamily = i;
@@ -72,7 +71,31 @@ namespace wfn_eng::vulkan::util {
     // Queries the swapchain capabilities of a VkSurfaceKHR and a
     // VkPhysicalDevice directly.
     SwapchainSupport::SwapchainSupport(VkSurfaceKHR surface, VkPhysicalDevice device) {
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &capabilities);
 
+        uint32_t formatCount;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+        if (formatCount > 0) {
+            formats.resize(formatCount);
+            vkGetPhysicalDeviceSurfaceFormatsKHR(
+                device,
+                surface,
+                &formatCount,
+                formats.data()
+            );
+        }
+
+        uint32_t presentModeCount;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+        if (presentModeCount > 0) {
+            presentModes.resize(presentModeCount);
+            vkGetPhysicalDeviceSurfacePresentModesKHR(
+                device,
+                surface,
+                &presentModeCount,
+                presentModes.data()
+            );
+        }
     }
 
     ////
