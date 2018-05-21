@@ -11,6 +11,8 @@
 #include <cstdlib>
 #include <set>
 
+#include "sdl.hpp"
+
 const int WIDTH = 800;
 const int HEIGHT = 600;
 
@@ -70,7 +72,7 @@ public:
     }
 
 private:
-    SDL_Window *window;
+    wfn_eng::sdl::Window *window;
 
     VkInstance instance;
     VkDebugReportCallbackEXT callback;
@@ -100,16 +102,15 @@ private:
     VkSemaphore renderFinishedSemaphore;
 
     void initWindow() {
-        SDL_Init(SDL_INIT_EVERYTHING);
-        SDL_Vulkan_LoadLibrary("vulkan/macOS/lib/libvulkan.1.dylib");
-        window = SDL_CreateWindow(
-            "Testing Vulkan",
-            SDL_WINDOWPOS_UNDEFINED,
-            SDL_WINDOWPOS_UNDEFINED,
-            WIDTH,
-            HEIGHT,
-            SDL_WINDOW_VULKAN
-        );
+        wfn_eng::sdl::WindowConfig cfg {
+            .vulkanPath = "vulkan/macOS/lib/libvulkan.1.dylib",
+            .windowName = "Testing Vulkan",
+            .width = WIDTH,
+            .height = HEIGHT,
+            .flags = 0
+        };
+
+        window = new wfn_eng::sdl::Window(cfg);
     }
 
     void initVulkan() {
@@ -176,9 +177,7 @@ private:
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyInstance(instance, nullptr);
 
-        SDL_DestroyWindow(window);
-        SDL_Vulkan_UnloadLibrary();
-        SDL_Quit();
+        delete window;
     }
 
     void createInstance() {
@@ -228,7 +227,7 @@ private:
     }
 
     void createSurface() {
-        if (!SDL_Vulkan_CreateSurface(window, instance, &surface))
+        if (!SDL_Vulkan_CreateSurface(window->ref(), instance, &surface))
             throw std::runtime_error("Failed to build surface");
     }
 
@@ -810,11 +809,11 @@ private:
 
     std::vector<const char*> getRequiredExtensions() {
         uint32_t extensionCount;
-        if (!SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr))
+        if (!SDL_Vulkan_GetInstanceExtensions(window->ref(), &extensionCount, nullptr))
             throw std::runtime_error("Could not get required extension count");
 
         const char **pNames = new const char *[extensionCount];
-        if (!SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, pNames))
+        if (!SDL_Vulkan_GetInstanceExtensions(window->ref(), &extensionCount, pNames))
             throw std::runtime_error("Could not get extensions.");
 
         std::vector<const char*> extensions(pNames, pNames + extensionCount);
