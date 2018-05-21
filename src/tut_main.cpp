@@ -32,28 +32,6 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback) {
-    auto func = (PFN_vkCreateDebugReportCallbackEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
-    if (func != nullptr) {
-        return func(instance, pCreateInfo, pAllocator, pCallback);
-    } else {
-        return VK_ERROR_EXTENSION_NOT_PRESENT;
-    }
-}
-
-void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator) {
-    auto func = (PFN_vkDestroyDebugReportCallbackEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
-    if (func != nullptr) {
-        func(instance, callback, pAllocator);
-    }
-}
-
-struct SwapChainSupportDetails {
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-};
-
 class HelloTriangleApplication {
 public:
     void run() {
@@ -65,10 +43,7 @@ public:
 
 private:
     wfn_eng::sdl::Window *window;
-
-    VkInstance instance;
-    VkDebugReportCallbackEXT callback;
-    VkSurfaceKHR surface;
+    wfn_eng::vulkan::Base *base;
 
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice device;
@@ -106,9 +81,8 @@ private:
     }
 
     void initVulkan() {
-        createInstance();
-        setupDebugCallback();
-        createSurface();
+        base = new wfn_eng::vulkan::Base(*window);
+
         pickPhysicalDevice();
         createLogicalDevice();
         createSwapChain();
@@ -162,77 +136,20 @@ private:
         vkDestroySwapchainKHR(device, swapChain, nullptr);
         vkDestroyDevice(device, nullptr);
 
-        if (enableValidationLayers) {
-            DestroyDebugReportCallbackEXT(instance, callback, nullptr);
-        }
-
-        vkDestroySurfaceKHR(instance, surface, nullptr);
-        vkDestroyInstance(instance, nullptr);
-
+        delete base;
         delete window;
-    }
-
-    void createInstance() {
-        if (enableValidationLayers && !checkValidationLayerSupport()) {
-            throw std::runtime_error("validation layers requested, but not available!");
-        }
-
-        VkApplicationInfo appInfo = {};
-        appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appInfo.pApplicationName = "Hello Triangle";
-        appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.pEngineName = "No Engine";
-        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_0;
-
-        VkInstanceCreateInfo createInfo = {};
-        createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        createInfo.pApplicationInfo = &appInfo;
-
-        auto extensions = getRequiredExtensions();
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-        createInfo.ppEnabledExtensionNames = extensions.data();
-
-        if (enableValidationLayers) {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-            createInfo.ppEnabledLayerNames = validationLayers.data();
-        } else {
-            createInfo.enabledLayerCount = 0;
-        }
-
-        if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create instance!");
-        }
-    }
-
-    void setupDebugCallback() {
-        if (!enableValidationLayers) return;
-
-        VkDebugReportCallbackCreateInfoEXT createInfo = {};
-        createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-        createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-        createInfo.pfnCallback = debugCallback;
-
-        if (CreateDebugReportCallbackEXT(instance, &createInfo, nullptr, &callback) != VK_SUCCESS) {
-            throw std::runtime_error("failed to set up debug callback!");
-        }
-    }
-
-    void createSurface() {
-        if (!SDL_Vulkan_CreateSurface(window->ref(), instance, &surface))
-            throw std::runtime_error("Failed to build surface");
     }
 
     void pickPhysicalDevice() {
         uint32_t deviceCount = 0;
-        vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+        vkEnumeratePhysicalDevices(base->instance(), &deviceCount, nullptr);
 
         if (deviceCount == 0) {
             throw std::runtime_error("failed to find GPUs with Vulkan support!");
         }
 
         std::vector<VkPhysicalDevice> devices(deviceCount);
-        vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+        vkEnumeratePhysicalDevices(base->instance(), &deviceCount, devices.data());
 
         for (const auto& device : devices) {
             if (isDeviceSuitable(device)) {
@@ -247,7 +164,7 @@ private:
     }
 
     void createLogicalDevice() {
-        wfn_eng::vulkan::util::QueueFamilyIndices indices(surface, physicalDevice);
+        wfn_eng::vulkan::util::QueueFamilyIndices indices(base->surface(), physicalDevice);
 
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
         std::set<int> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentationFamily};
@@ -291,7 +208,7 @@ private:
     }
 
     void createSwapChain() {
-        wfn_eng::vulkan::util::SwapchainSupport swapChainSupport(surface, physicalDevice);
+        wfn_eng::vulkan::util::SwapchainSupport swapChainSupport(base->surface(), physicalDevice);
 
         VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
         VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -304,7 +221,7 @@ private:
 
         VkSwapchainCreateInfoKHR createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = surface;
+        createInfo.surface = base->surface();
 
         createInfo.minImageCount = imageCount;
         createInfo.imageFormat = surfaceFormat.format;
@@ -313,7 +230,7 @@ private:
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        wfn_eng::vulkan::util::QueueFamilyIndices indices(surface, physicalDevice);
+        wfn_eng::vulkan::util::QueueFamilyIndices indices(base->surface(), physicalDevice);
         uint32_t queueFamilyIndices[] = {(uint32_t) indices.graphicsFamily, (uint32_t) indices.presentationFamily};
 
         if (indices.graphicsFamily != indices.presentationFamily) {
@@ -546,7 +463,7 @@ private:
     }
 
     void createCommandPool() {
-        wfn_eng::vulkan::util::QueueFamilyIndices queueFamilyIndices(surface, physicalDevice);
+        wfn_eng::vulkan::util::QueueFamilyIndices queueFamilyIndices(base->surface(), physicalDevice);
 
         VkCommandPoolCreateInfo poolInfo = {};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -714,13 +631,13 @@ private:
     }
 
     bool isDeviceSuitable(VkPhysicalDevice device) {
-        wfn_eng::vulkan::util::QueueFamilyIndices indices(surface, device);
+        wfn_eng::vulkan::util::QueueFamilyIndices indices(base->surface(), device);
 
         bool extensionsSupported = checkDeviceExtensionSupport(device);
 
         bool swapChainAdequate = false;
         if (extensionsSupported) {
-            wfn_eng::vulkan::util::SwapchainSupport swapChainSupport(surface, device);
+            wfn_eng::vulkan::util::SwapchainSupport swapChainSupport(base->surface(), device);
             swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
         }
 

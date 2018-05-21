@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
+#include "error.hpp"
 #include "sdl.hpp"
 
 namespace wfn_eng::vulkan {
@@ -102,13 +103,33 @@ namespace wfn_eng::vulkan {
         VkSurfaceKHR _surface;
 
     public:
-        Base();
+        ////
+        // Base(sdl::Window&)
+        //
+        // Construct the base of the Vulkan instance (VkInstance and
+        // VkSurfaceKHR) from an SDL window wrapper.
+        Base(sdl::Window&);
+
+        ////
+        // ~Base()
+        //
+        // Destroying the VkInstance and VkSurfaceKHR.
         ~Base();
 
-        VkInstance& instance();
-        VkSurfaceKHR& surface();
+        ////
+        // VkInstance instance()
+        //
+        // Provides access to the VkInstance.
+        VkInstance instance();
+
+        ////
+        // VkSurfaceKHR surface()
+        //
+        // Provides access to the VkSurfaceKHR.
+        VkSurfaceKHR surface();
 
 
+        // Following Rule of 3's
         Base(const Base&) = delete;
         Base& operator=(const Base&) = delete;
     };
