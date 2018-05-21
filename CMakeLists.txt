@@ -25,7 +25,10 @@ set(HEADERS
 )
 
 set(SOURCES
+  src/vulkan/util.cpp
+
   src/sdl/window.cpp
+
   src/main.cpp
 )
 

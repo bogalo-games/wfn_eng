@@ -10,6 +10,7 @@
 #include <vector>
 #include <set>
 
+#include "vulkan.hpp"
 #include "sdl.hpp"
 
 const int WIDTH  = 640;

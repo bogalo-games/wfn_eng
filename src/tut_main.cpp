@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <set>
 
+#include "vulkan.hpp"
 #include "sdl.hpp"
 
 const int WIDTH = 800;
@@ -46,15 +47,6 @@ void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT
         func(instance, callback, pAllocator);
     }
 }
-
-struct QueueFamilyIndices {
-    int graphicsFamily = -1;
-    int presentFamily = -1;
-
-    bool isComplete() {
-        return graphicsFamily >= 0 && presentFamily >= 0;
-    }
-};
 
 struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
@@ -255,10 +247,10 @@ private:
     }
 
     void createLogicalDevice() {
-        QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+        wfn_eng::vulkan::util::QueueFamilyIndices indices(surface, physicalDevice);
 
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-        std::set<int> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
+        std::set<int> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentationFamily};
 
         float queuePriority = 1.0f;
         for (int queueFamily : uniqueQueueFamilies) {
@@ -295,7 +287,7 @@ private:
         }
 
         vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
-        vkGetDeviceQueue(device, indices.presentFamily, 0, &presentQueue);
+        vkGetDeviceQueue(device, indices.presentationFamily, 0, &presentQueue);
     }
 
     void createSwapChain() {
@@ -321,10 +313,10 @@ private:
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
-        uint32_t queueFamilyIndices[] = {(uint32_t) indices.graphicsFamily, (uint32_t) indices.presentFamily};
+        wfn_eng::vulkan::util::QueueFamilyIndices indices(surface, physicalDevice);
+        uint32_t queueFamilyIndices[] = {(uint32_t) indices.graphicsFamily, (uint32_t) indices.presentationFamily};
 
-        if (indices.graphicsFamily != indices.presentFamily) {
+        if (indices.graphicsFamily != indices.presentationFamily) {
             createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
             createInfo.queueFamilyIndexCount = 2;
             createInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -554,7 +546,7 @@ private:
     }
 
     void createCommandPool() {
-        QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
+        wfn_eng::vulkan::util::QueueFamilyIndices queueFamilyIndices(surface, physicalDevice);
 
         VkCommandPoolCreateInfo poolInfo = {};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -746,7 +738,7 @@ private:
     }
 
     bool isDeviceSuitable(VkPhysicalDevice device) {
-        QueueFamilyIndices indices = findQueueFamilies(device);
+        wfn_eng::vulkan::util::QueueFamilyIndices indices(surface, device);
 
         bool extensionsSupported = checkDeviceExtensionSupport(device);
 
@@ -756,7 +748,7 @@ private:
             swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
         }
 
-        return indices.isComplete() && extensionsSupported && swapChainAdequate;
+        return indices.sufficient() && extensionsSupported && swapChainAdequate;
     }
 
     bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
@@ -773,38 +765,6 @@ private:
         }
 
         return requiredExtensions.empty();
-    }
-
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
-        QueueFamilyIndices indices;
-
-        uint32_t queueFamilyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-        int i = 0;
-        for (const auto& queueFamily : queueFamilies) {
-            if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-                indices.graphicsFamily = i;
-            }
-
-            VkBool32 presentSupport = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-
-            if (queueFamily.queueCount > 0 && presentSupport) {
-                indices.presentFamily = i;
-            }
-
-            if (indices.isComplete()) {
-                break;
-            }
-
-            i++;
-        }
-
-        return indices;
     }
 
     std::vector<const char*> getRequiredExtensions() {
