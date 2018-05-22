@@ -217,27 +217,34 @@ namespace wfn_eng::vulkan {
         VkFormat _format;
         VkExtent2D _extent;
         std::vector<VkImageView> _imageViews;
+        VkRenderPass _renderPass;
         std::vector<VkFramebuffer> _frameBuffers;
 
         VkDevice device;
 
         ////
-        // makeSwapchain
+        // void makeSwapchain(Base&, Device&)
         //
         // Constructs the VkSwapchainKHR and the swapchain's VkImages.
-        void makeSwapchain();
+        void makeSwapchain(Base&, Device&);
 
         ////
-        // makeImageViews
+        // void makeImageViews(Device&)
         //
         // Constructs the swapchain's VkImageViews.
-        void makeImageViews();
+        void makeImageViews(Device&);
 
         ////
-        // makeFrameBuffers
+        // void makeRenderPass(Device&)
+        //
+        // Constructs the swapchain's VkRenderPass.
+        void makeRenderPass(Device&);
+
+        ////
+        // void makeFrameBuffers(Device&)
         //
         // Constructs the swapchain's VkFramebuffers.
-        void makeFrameBuffers();
+        void makeFrameBuffers(Device&);
 
     public:
         ////
@@ -283,6 +290,12 @@ namespace wfn_eng::vulkan {
         //
         // Provides a reference to the image views.
         std::vector<VkImageView>& imageViews();
+
+        ////
+        // VkRenderPass& renderPass()
+        //
+        // Provides a reference to the render pass.
+        VkRenderPass& renderPass();
 
         ////
         // std::vector<VkFramebuffer>& frameBuffers();
