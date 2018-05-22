@@ -103,6 +103,10 @@ namespace wfn_eng::vulkan {
         VkSurfaceKHR _surface;
 
     public:
+        inline static const std::vector<const char *> deviceExtensions = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        };
+
         ////
         // Base(sdl::Window&)
         //
@@ -120,13 +124,13 @@ namespace wfn_eng::vulkan {
         // VkInstance instance()
         //
         // Provides access to the VkInstance.
-        VkInstance instance();
+        VkInstance& instance();
 
         ////
         // VkSurfaceKHR surface()
         //
         // Provides access to the VkSurfaceKHR.
-        VkSurfaceKHR surface();
+        VkSurfaceKHR& surface();
 
 
         // Following Rule of 3's
@@ -142,21 +146,61 @@ namespace wfn_eng::vulkan {
     class Device {
         VkPhysicalDevice _physical;
         VkDevice _logical;
-
         VkQueue _graphicsQueue;
         VkQueue _presentationQueue;
 
+        ////
+        // makePhysicalDevice
+        //
+        // Constructs the VkPhysicalDevice.
+        void makePhysicalDevice(Base&);
+
+        ////
+        // makeLogicalDevice
+        //
+        // Constructs the VkDevice, along with both the graphics and
+        // presentation queues.
+        void makeLogicalDevice(Base&);
+
     public:
-        Device();
+        ////
+        // Device(Base&)
+        //
+        // Constructing a device from a Base.
+        Device(Base&);
+
+        ////
+        // ~Device()
+        //
+        // Destroying the Device.
         ~Device();
 
+        ////
+        // VkPhysicalDevice physical()
+        //
+        // Getting the reference to the VkPhysicalDevice.
         VkPhysicalDevice& physical();
+
+        ////
+        // VkDevice logical()
+        //
+        // Getting the reference to the VkDevice.
         VkDevice& logical();
 
+        ////
+        // VkQueue graphicsQueue()
+        //
+        // Getting the graphics queue.
         VkQueue& graphicsQueue();
-        VkQueue& presentationQueue;
+
+        ////
+        // VkQueue presentationQueue()
+        //
+        // Getting the presentation queue.
+        VkQueue& presentationQueue();
 
 
+        // Following Rule of 3's
         Device(const Device&) = delete;
         Device& operator=(const Device&) = delete;
     };

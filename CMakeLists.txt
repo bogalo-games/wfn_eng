@@ -26,6 +26,8 @@ set(HEADERS
 )
 
 set(SOURCES
+  src/vulkan/device.cpp
+  src/vulkan/base.cpp
   src/vulkan/util.cpp
 
   src/sdl/window.cpp

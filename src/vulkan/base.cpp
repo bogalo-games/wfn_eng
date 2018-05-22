@@ -80,11 +80,11 @@ namespace wfn_eng::vulkan {
     // VkInstance instance()
     //
     // Provides access to the VkInstance.
-    VkInstance Base::instance() { return _instance; }
+    VkInstance& Base::instance() { return _instance; }
 
     ////
     // VkSurfaceKHR surface()
     //
     // Provides access to the VkSurfaceKHR.
-    VkSurfaceKHR Base::surface() { return _surface; }
+    VkSurfaceKHR& Base::surface() { return _surface; }
 }
