@@ -66,7 +66,6 @@ namespace wfn_eng::vulkan {
         }
     }
 
-
     ////
     // ~Base()
     //

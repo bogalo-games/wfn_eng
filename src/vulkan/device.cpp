@@ -44,7 +44,11 @@ namespace wfn_eng::vulkan {
     //
     // A container for the device-related features of Vulkan, that includes the
     // physical and logical devices, along with their relevant queues.
-
+    
+    ////
+    // makePhysicalDevice
+    //
+    // Constructs the VkPhysicalDevice.
     void Device::makePhysicalDevice(Base& base) {
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(base.instance(), &deviceCount, nullptr);
@@ -75,6 +79,11 @@ namespace wfn_eng::vulkan {
         }
     }
 
+    ////
+    // makeLogicalDevice
+    //
+    // Constructs the VkDevice, along with both the graphics and
+    // presentation queues.
     void Device::makeLogicalDevice(Base& base) {
         wfn_eng::vulkan::util::QueueFamilyIndices indices(base.surface(), physical());
 
