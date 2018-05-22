@@ -208,7 +208,9 @@ namespace wfn_eng::vulkan {
     ////
     // Swapchain
     //
-    // TODO: Documentation
+    // A container for the VkSwapchainKHR and all associated data, including
+    // the swapchain's VkImages, the format, the extent, and the VkImageViews,
+    // and the VkFramebuffers.
     class Swapchain {
         VkSwapchainKHR _swapchain;
         std::vector<VkImage> _images;
@@ -217,17 +219,79 @@ namespace wfn_eng::vulkan {
         std::vector<VkImageView> _imageViews;
         std::vector<VkFramebuffer> _frameBuffers;
 
+        VkDevice device;
+
+        ////
+        // makeSwapchain
+        //
+        // Constructs the VkSwapchainKHR and the swapchain's VkImages.
+        void makeSwapchain();
+
+        ////
+        // makeImageViews
+        //
+        // Constructs the swapchain's VkImageViews.
+        void makeImageViews();
+
+        ////
+        // makeFrameBuffers
+        //
+        // Constructs the swapchain's VkFramebuffers.
+        void makeFrameBuffers();
+
     public:
-        Swapchain();
+        ////
+        // Swapchain
+        //
+        // Constructing a swapchain, along with all its attachments (e.g.
+        // swapchain images and frame buffers).
+        Swapchain(Base&, Device&);
+
+        ////
+        // ~Swapchain
+        //
+        // Cleaning up the Swapchain. Note that it requires a reference to the
+        // VkDevice, which is included in this class for that purpose.
         ~Swapchain();
 
+        ////
+        // VkSwapchainKHR& get()
+        //
+        // Provides a reference to the swapchain.
         VkSwapchainKHR& get();
-        std::vector<VkImage>& images();
-        VkFormat& format();
-        VkExtent2D& extent();
-        std::vector<VkImageView&> imageViews();
-        std::vector<VkFramebuffer&> frameBuffers();
 
+        ////
+        // std::vector<VkImage>& images()
+        //
+        // Provides a reference to the swapchain's images.
+        std::vector<VkImage>& images();
+
+        ////
+        // VkFormat& format()
+        //
+        // Provides a reference to the images' format.
+        VkFormat& format();
+
+        ////
+        // VkExtent2D& extent()
+        //
+        // Provides a reference to the images' extent.
+        VkExtent2D& extent();
+
+        ////
+        // std::vector<VkImageView>& imageViews()
+        //
+        // Provides a reference to the image views.
+        std::vector<VkImageView>& imageViews();
+
+        ////
+        // std::vector<VkFramebuffer>& frameBuffers();
+        //
+        // Provides a reference to the framebuffers.
+        std::vector<VkFramebuffer>& frameBuffers();
+
+
+        // Following Rule of 3's
         Swapchain(const Swapchain&) = delete;
         Swapchain& operator=(const Swapchain&) = delete;
     };
@@ -237,14 +301,19 @@ namespace wfn_eng::vulkan {
     //
     // TODO: Documentation
     class Core {
-        Base base;
-        Device device;
-        Swapchain swapchain;
+        Base *_base;
+        Device *_device;
+        Swapchain *_swapchain;
 
     public:
         Core(wfn_eng::sdl::Window&);
         ~Core();
 
+        Base& base();
+        Device& device();
+        Swapchain& swapchain();
+
+        // Following Rule of 3's
         Core(const Core&) = delete;
         Core& operator=(const Core&) = delete;
     };
