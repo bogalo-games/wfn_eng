@@ -46,9 +46,8 @@ namespace wfn_eng::vulkan::util {
     //
     // Given the reference to a Base and a Device, query the relevant
     // queue indices.
-    //
-    // TODO: Impl once we have Base and Device implemented
-    QueueFamilyIndices::QueueFamilyIndices(Base& base, Device& device) { }
+    QueueFamilyIndices::QueueFamilyIndices(Base& base, Device& device) :
+            QueueFamilyIndices(base.surface(), device.physical()) { }
 
     ////
     // bool sufficient
@@ -104,9 +103,8 @@ namespace wfn_eng::vulkan::util {
     // Queries the swapchain capabilities of a VkPhysicalDevice via a
     // reference to the Base and Device classes (below) that encapsulate
     // the surface and physical device.
-    //
-    // TODO: Impl once we have Base and Device implemented
-    SwapchainSupport::SwapchainSupport(Base& base, Device& device) { }
+    SwapchainSupport::SwapchainSupport(Base& base, Device& device) :
+            SwapchainSupport(base.surface(), device.physical()) { }
 
     ////
     // bool sufficient
