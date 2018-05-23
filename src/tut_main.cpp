@@ -43,9 +43,7 @@ public:
 
 private:
     wfn_eng::sdl::Window *window;
-    wfn_eng::vulkan::Base *base;
-    wfn_eng::vulkan::Device *device;
-    wfn_eng::vulkan::Swapchain *swapchain;
+    wfn_eng::vulkan::Core *core;
 
     VkPipelineLayout pipelineLayout;
     VkPipeline graphicsPipeline;
@@ -69,9 +67,7 @@ private:
     }
 
     void initVulkan() {
-        base = new wfn_eng::vulkan::Base(*window);
-        device = new wfn_eng::vulkan::Device(*base);
-        swapchain = new wfn_eng::vulkan::Swapchain(*base, *device);
+        core = new wfn_eng::vulkan::Core(*window);
 
         createGraphicsPipeline();
         createCommandPool();
@@ -96,25 +92,23 @@ private:
             SDL_Delay(16);
         }
 
-        vkDeviceWaitIdle(device->logical());
+        vkDeviceWaitIdle(core->device().logical());
     }
 
     void cleanup() {
-        vkDestroySemaphore(device->logical(), renderFinishedSemaphore, nullptr);
-        vkDestroySemaphore(device->logical(), imageAvailableSemaphore, nullptr);
+        vkDestroySemaphore(core->device().logical(), renderFinishedSemaphore, nullptr);
+        vkDestroySemaphore(core->device().logical(), imageAvailableSemaphore, nullptr);
 
-        vkDestroyCommandPool(device->logical(), commandPool, nullptr);
+        vkDestroyCommandPool(core->device().logical(), commandPool, nullptr);
 
-        for (auto framebuffer : swapchain->frameBuffers()) {
-            vkDestroyFramebuffer(device->logical(), framebuffer, nullptr);
+        for (auto framebuffer : core->swapchain().frameBuffers()) {
+            vkDestroyFramebuffer(core->device().logical(), framebuffer, nullptr);
         }
 
-        vkDestroyPipeline(device->logical(), graphicsPipeline, nullptr);
-        vkDestroyPipelineLayout(device->logical(), pipelineLayout, nullptr);
+        vkDestroyPipeline(core->device().logical(), graphicsPipeline, nullptr);
+        vkDestroyPipelineLayout(core->device().logical(), pipelineLayout, nullptr);
 
-        delete swapchain;
-        delete device;
-        delete base;
+        delete core;
         delete window;
     }
 
@@ -152,14 +146,14 @@ private:
         VkViewport viewport = {};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = (float) swapchain->extent().width;
-        viewport.height = (float) swapchain->extent().height;
+        viewport.width = (float) core->swapchain().extent().width;
+        viewport.height = (float) core->swapchain().extent().height;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
         VkRect2D scissor = {};
         scissor.offset = {0, 0};
-        scissor.extent = swapchain->extent();
+        scissor.extent = core->swapchain().extent();
 
         VkPipelineViewportStateCreateInfo viewportState = {};
         viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -203,7 +197,7 @@ private:
         pipelineLayoutInfo.setLayoutCount = 0;
         pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-        if (vkCreatePipelineLayout(device->logical(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+        if (vkCreatePipelineLayout(core->device().logical(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
             throw std::runtime_error("failed to create pipeline layout!");
         }
 
@@ -218,32 +212,32 @@ private:
         pipelineInfo.pMultisampleState = &multisampling;
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.layout = pipelineLayout;
-        pipelineInfo.renderPass = swapchain->renderPass();
+        pipelineInfo.renderPass = core->swapchain().renderPass();
         pipelineInfo.subpass = 0;
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-        if (vkCreateGraphicsPipelines(device->logical(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+        if (vkCreateGraphicsPipelines(core->device().logical(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
             throw std::runtime_error("failed to create graphics pipeline!");
         }
 
-        vkDestroyShaderModule(device->logical(), fragShaderModule, nullptr);
-        vkDestroyShaderModule(device->logical(), vertShaderModule, nullptr);
+        vkDestroyShaderModule(core->device().logical(), fragShaderModule, nullptr);
+        vkDestroyShaderModule(core->device().logical(), vertShaderModule, nullptr);
     }
 
     void createCommandPool() {
-        wfn_eng::vulkan::util::QueueFamilyIndices queueFamilyIndices(base->surface(), device->physical());
+        wfn_eng::vulkan::util::QueueFamilyIndices queueFamilyIndices(core->base().surface(), core->device().physical());
 
         VkCommandPoolCreateInfo poolInfo = {};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
 
-        if (vkCreateCommandPool(device->logical(), &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+        if (vkCreateCommandPool(core->device().logical(), &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create command pool!");
         }
     }
 
     void createCommandBuffers() {
-        commandBuffers.resize(swapchain->frameBuffers().size());
+        commandBuffers.resize(core->swapchain().frameBuffers().size());
 
         VkCommandBufferAllocateInfo allocInfo = {};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -251,7 +245,7 @@ private:
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
 
-        if (vkAllocateCommandBuffers(device->logical(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(core->device().logical(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffers!");
         }
 
@@ -266,10 +260,10 @@ private:
 
             VkRenderPassBeginInfo renderPassInfo = {};
             renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass = swapchain->renderPass();
-            renderPassInfo.framebuffer = swapchain->frameBuffers()[i];
+            renderPassInfo.renderPass = core->swapchain().renderPass();
+            renderPassInfo.framebuffer = core->swapchain().frameBuffers()[i];
             renderPassInfo.renderArea.offset = {0, 0};
-            renderPassInfo.renderArea.extent = swapchain->extent();
+            renderPassInfo.renderArea.extent = core->swapchain().extent();
 
             VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
             renderPassInfo.clearValueCount = 1;
@@ -293,8 +287,8 @@ private:
         VkSemaphoreCreateInfo semaphoreInfo = {};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-        if (vkCreateSemaphore(device->logical(), &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-            vkCreateSemaphore(device->logical(), &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS) {
+        if (vkCreateSemaphore(core->device().logical(), &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
+            vkCreateSemaphore(core->device().logical(), &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS) {
 
             throw std::runtime_error("failed to create semaphores!");
         }
@@ -302,7 +296,7 @@ private:
 
     void drawFrame() {
         uint32_t imageIndex;
-        vkAcquireNextImageKHR(device->logical(), swapchain->get(), std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+        vkAcquireNextImageKHR(core->device().logical(), core->swapchain().get(), std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -320,7 +314,7 @@ private:
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        if (vkQueueSubmit(device->graphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+        if (vkQueueSubmit(core->device().graphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
             throw std::runtime_error("failed to submit draw command buffer!");
         }
 
@@ -330,13 +324,13 @@ private:
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores = signalSemaphores;
 
-        VkSwapchainKHR swapChains[] = { swapchain->get() };
+        VkSwapchainKHR swapChains[] = { core->swapchain().get() };
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = swapChains;
 
         presentInfo.pImageIndices = &imageIndex;
 
-        vkQueuePresentKHR(device->presentationQueue(), &presentInfo);
+        vkQueuePresentKHR(core->device().presentationQueue(), &presentInfo);
     }
 
     VkShaderModule createShaderModule(const std::vector<char>& code) {
@@ -346,7 +340,7 @@ private:
         createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
         VkShaderModule shaderModule;
-        if (vkCreateShaderModule(device->logical(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+        if (vkCreateShaderModule(core->device().logical(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
             throw std::runtime_error("failed to create shader module!");
         }
 

@@ -312,19 +312,48 @@ namespace wfn_eng::vulkan {
     ////
     // Core
     //
-    // TODO: Documentation
+    // A wrapper around the Base, Device, and Swapchain implementations to
+    // provide a central wrapper around the core functionality of Vulkan.
+    //
+    // Does not include reference to graphics pipelines or command buffers
+    // because they are application specific.
     class Core {
         Base *_base;
         Device *_device;
         Swapchain *_swapchain;
 
     public:
+        ////
+        // Core(wnf_eng::sdl::Window&)
+        //
+        // Constructs the Base, Device, and Swapchain, given reference to an SDL
+        // window wrapper.
         Core(wfn_eng::sdl::Window&);
+
+        ////
+        // ~Core()
+        //
+        // Handles the destruction of the Base, Device, and Swapchain.
         ~Core();
 
+        ////
+        // Base& base()
+        //
+        // Returns the Base reference.
         Base& base();
+
+        ////
+        // Device& device()
+        //
+        // Returns the Device reference.
         Device& device();
+
+        ////
+        // Swapchain& swapchain()
+        //
+        // Returns the Swapchain reference.
         Swapchain& swapchain();
+
 
         // Following Rule of 3's
         Core(const Core&) = delete;

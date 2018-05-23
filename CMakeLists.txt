@@ -29,6 +29,7 @@ set(SOURCES
   src/vulkan/swapchain.cpp
   src/vulkan/device.cpp
   src/vulkan/base.cpp
+  src/vulkan/core.cpp
   src/vulkan/util.cpp
 
   src/sdl/window.cpp
