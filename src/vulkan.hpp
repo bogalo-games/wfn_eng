@@ -133,9 +133,11 @@ namespace wfn_eng::vulkan {
         VkSurfaceKHR& surface();
 
 
-        // Following Rule of 3's
+        // Following Rule of 5's
         Base(const Base&) = delete;
+        Base(Base&&) = delete;
         Base& operator=(const Base&) = delete;
+        Base& operator=(Base&&) = delete;
     };
 
     ////
@@ -200,9 +202,11 @@ namespace wfn_eng::vulkan {
         VkQueue& presentationQueue();
 
 
-        // Following Rule of 3's
+        // Following Rule of 5's
         Device(const Device&) = delete;
+        Device(Device&&) = delete;
         Device& operator=(const Device&) = delete;
+        Device& operator=(Device&&) = delete;
     };
 
     ////
@@ -304,9 +308,11 @@ namespace wfn_eng::vulkan {
         std::vector<VkFramebuffer>& frameBuffers();
 
 
-        // Following Rule of 3's
+        // Following Rule of 5's
         Swapchain(const Swapchain&) = delete;
+        Swapchain(Swapchain&&) = delete;
         Swapchain& operator=(const Swapchain&) = delete;
+        Swapchain& operator=(Swapchain&&) = delete;
     };
 
     ////
@@ -355,9 +361,11 @@ namespace wfn_eng::vulkan {
         Swapchain& swapchain();
 
 
-        // Following Rule of 3's
+        // Following Rule of 5's
         Core(const Core&) = delete;
+        Core(Core&&) = delete;
         Core& operator=(const Core&) = delete;
+        Core& operator=(Core&&) = delete;
     };
 }
 
