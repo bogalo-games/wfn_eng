@@ -1,6 +1,7 @@
 #include <vulkan/vulkan.h>
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#include <glm/glm.hpp>
 
 #include <functional>
 #include <stdexcept>
@@ -8,6 +9,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <vector>
+#include <array>
 #include <set>
 
 #include "vulkan.hpp"
@@ -78,6 +80,50 @@ static VkPipelineShaderStageCreateInfo shaderCreateInfo(VkShaderModule module, V
 
     return createInfo;
 }
+
+////
+// struct Vertex
+//
+// A struct that contains relevant information for the location and color of
+// vertices.
+struct Vertex {
+    glm::vec2 pos;
+    glm::vec3 color;
+
+    ////
+    // VkVertexInputBindingDescription
+    //
+    // Generates binding information for this struct.
+    static VkVertexInputBindingDescription getBindingDescription() {
+        VkVertexInputBindingDescription desc = {};
+
+        desc.binding = 0;
+        desc.stride = sizeof(Vertex);
+        desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+        return desc;
+    }
+
+    ////
+    // std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions
+    //
+    // Generates attribute information for this struct.
+    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 2> descs = {};
+
+        descs[0].binding = 0;
+        descs[0].location = 0;
+        descs[0].format = VK_FORMAT_R32G32_SFLOAT;
+        descs[0].offset = offsetof(Vertex, pos);
+
+        descs[1].binding = 0;
+        descs[1].location = 1;
+        descs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+        descs[1].offset = offsetof(Vertex, color);
+
+        return descs;
+    }
+};
 
 class HelloTriangleApplication {
 private:
@@ -154,12 +200,15 @@ private:
             fragCreateInfo
         };
 
+        auto bindingDesc = Vertex::getBindingDescription();
+        auto attributeDescs = Vertex::getAttributeDescriptions();
+
         VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexBindingDescriptionCount = 0;
-        vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
-        vertexInputInfo.vertexAttributeDescriptionCount = 0;
-        vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+        vertexInputInfo.vertexBindingDescriptionCount = 1;
+        vertexInputInfo.pVertexBindingDescriptions = &bindingDesc;
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescs.size());
+        vertexInputInfo.pVertexAttributeDescriptions = attributeDescs.data();
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
