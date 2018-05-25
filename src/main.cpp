@@ -82,6 +82,21 @@ static VkPipelineShaderStageCreateInfo shaderCreateInfo(VkShaderModule module, V
 }
 
 ////
+// uint32_t findMemoryType(uint32_t, VkMemoryPropertyFlags)
+//
+// Chooses the type of memory to use for our buffer.
+static uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+    VkPhysicalDeviceMemoryProperties memProps;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProps);
+
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++)
+        if ((typeFilter & (1 << i)) && (memProps.memoryTypes[i].propertyFlags & properties) == properties)
+            return i;
+
+    throw std::runtime_error("Failed to find a suitable memory type");
+}
+
+////
 // struct Vertex
 //
 // A struct that contains relevant information for the location and color of
@@ -137,14 +152,24 @@ private:
 
     // Command buffers
     VkCommandPool commandPool;
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMem;
     std::vector<VkCommandBuffer> commandBuffers;
 
     // Semaphore
     VkSemaphore imageAvailable;
     VkSemaphore renderFinished;
 
+    // Vertex definition
+    const std::vector<Vertex> vertices = {
+        { {  0.0f, -0.5f }, { 1.0f, 1.0f, 0.0f } },
+        { {  0.5f,  0.5f }, { 0.0f, 1.0f, 0.0f } },
+        { { -0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f } }
+    };
+
     ////
     // Initializing Vulkan components
+
     void initRenderPass() {
         VkAttachmentDescription colorAttachment = {};
         colorAttachment.format = core->swapchain().format();
@@ -319,6 +344,9 @@ private:
     }
 
     void initCommandBuffers() {
+        //
+        // Creating the command pool
+        //
         wfn_eng::vulkan::util::QueueFamilyIndices queueFamily(
             core->base().surface(),
             core->device().physical()
@@ -335,6 +363,43 @@ private:
 
         commandBuffers.resize(core->swapchain().frameBuffers().size());
 
+        //
+        // Creating the vertex buffers
+        //
+        VkBufferCreateInfo bufferInfo = {};
+        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateBuffer(core->device().logical(), &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS)
+            throw std::runtime_error("Failed to create buffer");
+
+        VkMemoryRequirements memReq;
+        vkGetBufferMemoryRequirements(core->device().logical(), vertexBuffer, &memReq);
+
+        VkMemoryAllocateInfo memAllocInfo = {};
+        memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memAllocInfo.allocationSize = memReq.size;
+        memAllocInfo.memoryTypeIndex = findMemoryType(
+            core->device().physical(),
+            memReq.memoryTypeBits,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+
+        if (vkAllocateMemory(core->device().logical(), &memAllocInfo, nullptr, &vertexBufferMem) != VK_SUCCESS)
+            throw std::runtime_error("Failed to allocate vertex buffer memory");
+
+        vkBindBufferMemory(core->device().logical(), vertexBuffer, vertexBufferMem, 0);
+
+        void *data;
+        vkMapMemory(core->device().logical(), vertexBufferMem, 0, bufferInfo.size, 0, &data);
+        memcpy(data, vertices.data(), (size_t)bufferInfo.size);
+        vkUnmapMemory(core->device().logical(), vertexBufferMem);
+
+        //
+        // Creating the command buffers
+        //
         VkCommandBufferAllocateInfo allocateInfo = {};
         allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocateInfo.commandPool = commandPool;
@@ -366,7 +431,19 @@ private:
 
             vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
             vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-            vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+
+            VkBuffer vertexBuffers[] = { vertexBuffer };
+            VkDeviceSize offsets[] = { 0 };
+            vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+            vkCmdDraw(
+                commandBuffers[i],
+                static_cast<uint32_t>(vertices.size()),
+                1,
+                0,
+                0
+            );
+
             vkCmdEndRenderPass(commandBuffers[i]);
 
             if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS)
@@ -411,6 +488,8 @@ private:
     }
 
     void cleanupCommandBuffers() {
+        vkDestroyBuffer(core->device().logical(), vertexBuffer, nullptr);
+        vkFreeMemory(core->device().logical(), vertexBufferMem, nullptr);
         vkDestroyCommandPool(core->device().logical(), commandPool, nullptr);
     }
 
