@@ -250,7 +250,6 @@ namespace wfn_eng::vulkan {
         Device *_device;
         Swapchain *_swapchain;
 
-    public:
         ////
         // Core(wnf_eng::sdl::Window&)
         //
@@ -263,6 +262,31 @@ namespace wfn_eng::vulkan {
         //
         // Handles the destruction of the Base, Device, and Swapchain.
         ~Core();
+
+        ////
+        // Core *_core;
+        //
+        // An (initially null) reference to the core.
+        static Core *_core;
+
+    public:
+        ////
+        // void initialize(sdl::Window)
+        //
+        // Initializes the Core given reference to an SDL window.
+        static void initialize(sdl::Window&);
+
+        ////
+        // Core& instance()
+        //
+        // Provides a reference to the current instance of the Core object.
+        static Core& instance();
+
+        ////
+        // void destroy()
+        //
+        // Destroys the instance of the Core& object.
+        static void destroy();
 
         ////
         // Base& base()

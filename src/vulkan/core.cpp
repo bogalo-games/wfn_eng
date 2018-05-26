@@ -11,6 +11,12 @@ namespace wfn_eng::vulkan {
     // because they are application specific.
 
     ////
+    // Core *_core;
+    //
+    // An (initially null) reference to the core.
+    Core *Core::_core = nullptr;
+
+    ////
     // Core(wnf_eng::sdl::Window&)
     //
     // Constructs the Base, Device, and Swapchain, given reference to an SDL
@@ -48,4 +54,52 @@ namespace wfn_eng::vulkan {
     //
     // Returns the Swapchain reference.
     Swapchain& Core::swapchain() { return *_swapchain; }
+
+    ////
+    // void initialize(sdl::Window)
+    //
+    // Initializes the Core given reference to an SDL window.
+    void Core::initialize(sdl::Window& window) {
+        if (_core != nullptr) {
+            throw WfnError(
+                "wfn_eng::vulkan::Core",
+                "initialize",
+                "Cannot reinitialize Core"
+            );
+        }
+
+        _core = new Core(window);
+    }
+
+    ////
+    // Core& instance()
+    //
+    // Provides a reference to the current instance of the Core object.
+    Core& Core::instance() {
+        if (Core::_core == nullptr) {
+            throw WfnError(
+                "wfn_eng::vulkan::Core",
+                "instance",
+                "Cannot access null Core instance"
+            );
+        }
+
+        return *Core::_core;
+    }
+
+    ////
+    // void destroy()
+    //
+    // Destroys the instance of the Core& object.
+    void Core::destroy() {
+        if (Core::_core == nullptr) {
+            throw WfnError(
+                "wfn_eng::vulkan::Core",
+                "destroy",
+                "Cannot destroy null Core instance"
+            );
+        }
+
+        delete Core::_core;
+    }
 }

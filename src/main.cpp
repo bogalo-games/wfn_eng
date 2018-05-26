@@ -22,6 +22,10 @@ const int HEIGHT = 480;
 
 #define DEBUG
 
+using namespace wfn_eng;
+using namespace wfn_eng::vulkan;
+using namespace wfn_eng::vulkan::util;
+
 ////
 // vertPath
 // fragPath
@@ -130,7 +134,6 @@ struct Vertex {
 class HelloTriangleApplication {
 private:
     wfn_eng::sdl::Window *window;
-    wfn_eng::vulkan::Core *core;
 
     // Graphics pipeline
     VkRenderPass renderPass;
@@ -167,7 +170,7 @@ private:
 
     void initRenderPass() {
         VkAttachmentDescription colorAttachment = {};
-        colorAttachment.format = core->swapchain().format();
+        colorAttachment.format = Core::instance().swapchain().format();
         colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
         colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -202,15 +205,15 @@ private:
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies = &dependency;
 
-        if (vkCreateRenderPass(core->device().logical(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
+        if (vkCreateRenderPass(Core::instance().device().logical(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
             throw std::runtime_error("Could not create render pass");
     }
 
     void initGraphicsPipeline() {
         initRenderPass();
 
-        VkShaderModule vertModule = makeShader(*core, readFile(vertPath));
-        VkShaderModule fragModule = makeShader(*core, readFile(fragPath));
+        VkShaderModule vertModule = makeShader(Core::instance(), readFile(vertPath));
+        VkShaderModule fragModule = makeShader(Core::instance(), readFile(fragPath));
 
         auto vertCreateInfo = shaderCreateInfo(vertModule, VK_SHADER_STAGE_VERTEX_BIT);
         auto fragCreateInfo = shaderCreateInfo(fragModule, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -238,14 +241,14 @@ private:
         VkViewport viewport = {};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = (float)core->swapchain().extent().width;
-        viewport.height = (float)core->swapchain().extent().height;
+        viewport.width = (float)Core::instance().swapchain().extent().width;
+        viewport.height = (float)Core::instance().swapchain().extent().height;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
         VkRect2D scissor = {};
         scissor.offset = {0, 0};
-        scissor.extent = core->swapchain().extent();
+        scissor.extent = Core::instance().swapchain().extent();
 
         VkPipelineViewportStateCreateInfo viewportState = {};
         viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -313,7 +316,7 @@ private:
         pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
         pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-        if(vkCreatePipelineLayout(core->device().logical(), &pipelineLayoutInfo, nullptr, &graphicsPipelineLayout) != VK_SUCCESS)
+        if(vkCreatePipelineLayout(Core::instance().device().logical(), &pipelineLayoutInfo, nullptr, &graphicsPipelineLayout) != VK_SUCCESS)
             throw std::runtime_error("Failed to create graphics pipeline layout");
 
         VkGraphicsPipelineCreateInfo pipelineInfo = {};
@@ -334,13 +337,13 @@ private:
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex = -1;
 
-        if (vkCreateGraphicsPipelines(core->device().logical(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
+        if (vkCreateGraphicsPipelines(Core::instance().device().logical(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
             throw std::runtime_error("Failed to create graphics pipeline");
     }
 
     void createIndexBuffer() {
         indexBuffer = new wfn_eng::vulkan::util::Buffer(
-            core->device(),
+            Core::instance().device(),
             indices.size() * sizeof(uint16_t),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -348,15 +351,15 @@ private:
         );
 
         wfn_eng::vulkan::util::Buffer stagingBuffer(
-            core->device(),
+            Core::instance().device(),
             indices.size() * sizeof(uint16_t),
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             VK_SHARING_MODE_CONCURRENT
         );
 
-        stagingBuffer.copy_from(core->device(), indices.data());
-        stagingBuffer.copy_to(core->device(), transferPool, *indexBuffer);
+        stagingBuffer.copy_from(Core::instance().device(), indices.data());
+        stagingBuffer.copy_to(Core::instance().device(), transferPool, *indexBuffer);
     }
 
     void initCommandBuffers() {
@@ -364,8 +367,8 @@ private:
         // Creating the command pool
         //
         wfn_eng::vulkan::util::QueueFamilyIndices queueFamily(
-            core->base().surface(),
-            core->device().physical()
+            Core::instance().base().surface(),
+            Core::instance().device().physical()
         );
 
         VkCommandPoolCreateInfo vertexPoolInfo = {};
@@ -378,12 +381,12 @@ private:
         transferPoolInfo.queueFamilyIndex = queueFamily.transferFamily;
         transferPoolInfo.flags = 0;
 
-        if (vkCreateCommandPool(core->device().logical(), &vertexPoolInfo, nullptr, &vertexPool) != VK_SUCCESS)
+        if (vkCreateCommandPool(Core::instance().device().logical(), &vertexPoolInfo, nullptr, &vertexPool) != VK_SUCCESS)
             throw std::runtime_error("Failed to create command pool");
-        if (vkCreateCommandPool(core->device().logical(), &transferPoolInfo, nullptr, &transferPool) != VK_SUCCESS)
+        if (vkCreateCommandPool(Core::instance().device().logical(), &transferPoolInfo, nullptr, &transferPool) != VK_SUCCESS)
             throw std::runtime_error("Failed to create transfer pool");
 
-        vertexCommands.resize(core->swapchain().frameBuffers().size());
+        vertexCommands.resize(Core::instance().swapchain().frameBuffers().size());
         transferCommands.resize(1); // TODO: Change this later?
 
         //
@@ -393,7 +396,7 @@ private:
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
         vertexBuffer = new wfn_eng::vulkan::util::Buffer(
-            core->device(),
+            Core::instance().device(),
             bufferSize,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -401,17 +404,17 @@ private:
         );
 
         indexBuffer = new wfn_eng::vulkan::util::Buffer(
-            core->device(),
+            Core::instance().device(),
             indices.size() * sizeof(uint16_t),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VK_SHARING_MODE_CONCURRENT
         );
 
-        indexBuffer->indirect_copy_from(core->device(), transferPool, indices.data());
+        indexBuffer->indirect_copy_from(Core::instance().device(), transferPool, indices.data());
 
         transferBuffer = new wfn_eng::vulkan::util::Buffer(
-            core->device(),
+            Core::instance().device(),
             bufferSize,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -427,7 +430,7 @@ private:
         allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocateInfo.commandBufferCount = (uint32_t)vertexCommands.size();
 
-        if (vkAllocateCommandBuffers(core->device().logical(), &allocateInfo, vertexCommands.data()))
+        if (vkAllocateCommandBuffers(Core::instance().device().logical(), &allocateInfo, vertexCommands.data()))
             throw std::runtime_error("Failed to allocate command buffers");
 
         for (size_t i = 0; i < vertexCommands.size(); i++) {
@@ -442,9 +445,9 @@ private:
             VkRenderPassBeginInfo renderPassInfo = {};
             renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             renderPassInfo.renderPass = renderPass;
-            renderPassInfo.framebuffer = core->swapchain().frameBuffers()[i];
+            renderPassInfo.framebuffer = Core::instance().swapchain().frameBuffers()[i];
             renderPassInfo.renderArea.offset = { 0, 0 };
-            renderPassInfo.renderArea.extent = core->swapchain().extent();
+            renderPassInfo.renderArea.extent = Core::instance().swapchain().extent();
 
             VkClearValue clearColor = { 0.3f, 0.3f, 0.3f, 1.0f };
             renderPassInfo.clearValueCount = 1;
@@ -483,7 +486,7 @@ private:
         transferInfo.commandPool = transferPool;
         transferInfo.commandBufferCount = 1;
 
-        vkAllocateCommandBuffers(core->device().logical(), &transferInfo, transferCommands.data());
+        vkAllocateCommandBuffers(Core::instance().device().logical(), &transferInfo, transferCommands.data());
 
         VkCommandBufferBeginInfo beginInfo = {};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -504,8 +507,8 @@ private:
         VkSemaphoreCreateInfo semaphoreInfo = {};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-        if (vkCreateSemaphore(core->device().logical(), &semaphoreInfo, nullptr, &imageAvailable) != VK_SUCCESS ||
-            vkCreateSemaphore(core->device().logical(), &semaphoreInfo, nullptr, &renderFinished) != VK_SUCCESS) {
+        if (vkCreateSemaphore(Core::instance().device().logical(), &semaphoreInfo, nullptr, &imageAvailable) != VK_SUCCESS ||
+            vkCreateSemaphore(Core::instance().device().logical(), &semaphoreInfo, nullptr, &renderFinished) != VK_SUCCESS) {
 
             throw std::runtime_error("Failed to create semaphores");
         }
@@ -521,7 +524,7 @@ private:
         };
 
         window = new wfn_eng::sdl::Window(cfg);
-        core = new wfn_eng::vulkan::Core(*window);
+        wfn_eng::vulkan::Core::initialize(*window);
 
         initGraphicsPipeline();
         initCommandBuffers();
@@ -531,22 +534,22 @@ private:
     ////
     // Destroying everything
     void cleanupGraphicsPipeline() {
-        vkDestroyPipeline(core->device().logical(), graphicsPipeline, nullptr);
-        vkDestroyPipelineLayout(core->device().logical(), graphicsPipelineLayout, nullptr);
-        vkDestroyRenderPass(core->device().logical(), renderPass, nullptr);
+        vkDestroyPipeline(Core::instance().device().logical(), graphicsPipeline, nullptr);
+        vkDestroyPipelineLayout(Core::instance().device().logical(), graphicsPipelineLayout, nullptr);
+        vkDestroyRenderPass(Core::instance().device().logical(), renderPass, nullptr);
     }
 
     void cleanupCommandBuffers() {
         delete vertexBuffer;
         delete indexBuffer;
         delete transferBuffer;
-        vkDestroyCommandPool(core->device().logical(), transferPool, nullptr);
-        vkDestroyCommandPool(core->device().logical(), vertexPool, nullptr);
+        vkDestroyCommandPool(Core::instance().device().logical(), transferPool, nullptr);
+        vkDestroyCommandPool(Core::instance().device().logical(), vertexPool, nullptr);
     }
 
     void cleanupSemaphores() {
-        vkDestroySemaphore(core->device().logical(), imageAvailable, nullptr);
-        vkDestroySemaphore(core->device().logical(), renderFinished, nullptr);
+        vkDestroySemaphore(Core::instance().device().logical(), imageAvailable, nullptr);
+        vkDestroySemaphore(Core::instance().device().logical(), renderFinished, nullptr);
     }
 
     void cleanup() {
@@ -554,7 +557,7 @@ private:
         cleanupCommandBuffers();
         cleanupSemaphores();
 
-        delete core;
+        wfn_eng::vulkan::Core::destroy();
         delete window;
     }
 
@@ -571,21 +574,21 @@ private:
             mv_verts[i].pos = mv_verts[i].pos + pos + glm::vec2(dx , dy);
         }
 
-        transferBuffer->copy_from(core->device(), mv_verts.data());
+        transferBuffer->copy_from(Core::instance().device(), mv_verts.data());
 
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = transferCommands.data();
 
-        vkQueueSubmit(core->device().transferQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueSubmit(Core::instance().device().transferQueue(), 1, &submitInfo, VK_NULL_HANDLE);
     }
 
     void drawFrame() {
         uint32_t imageIndex;
         vkAcquireNextImageKHR(
-            core->device().logical(),
-            core->swapchain().get(),
+            Core::instance().device().logical(),
+            Core::instance().swapchain().get(),
             std::numeric_limits<uint64_t>::max(),
             imageAvailable,
             VK_NULL_HANDLE,
@@ -608,7 +611,7 @@ private:
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        if (vkQueueSubmit(core->device().graphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
+        if (vkQueueSubmit(Core::instance().device().graphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
             throw std::runtime_error("Failed to submit queue");
 
         VkPresentInfoKHR presentInfo = {};
@@ -616,13 +619,13 @@ private:
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores = signalSemaphores;
 
-        VkSwapchainKHR swapchains[] = { core->swapchain().get() };
+        VkSwapchainKHR swapchains[] = { Core::instance().swapchain().get() };
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = swapchains;
         presentInfo.pImageIndices = &imageIndex;
         presentInfo.pResults = nullptr;
 
-        vkQueuePresentKHR(core->device().presentationQueue(), &presentInfo);
+        vkQueuePresentKHR(Core::instance().device().presentationQueue(), &presentInfo);
     }
 
     void mainLoop() {
@@ -672,7 +675,7 @@ private:
             SDL_Delay(16);
         }
 
-        vkDeviceWaitIdle(core->device().logical());
+        vkDeviceWaitIdle(Core::instance().device().logical());
     }
 
 public:
