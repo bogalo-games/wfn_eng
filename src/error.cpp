@@ -16,8 +16,13 @@ namespace wfn_eng {
     //   - Module    (namespaced module or class name)
     //   - Method    (the name of the method that threw an exception)
     //   - Action    (the section that failed)
-    WfnError::WfnError(std::string module, std::string method, std::string action) {
-
+    WfnError::WfnError(std::string module, std::string method, std::string action) :
+            _module(module),
+            _method(method),
+            _action(action) {
+        std::stringstream builder;
+        builder << this->module() << " - " << this->method() << " - " << this->action();
+        _message = builder.str();
     }
 
     ////
@@ -44,8 +49,6 @@ namespace wfn_eng {
     // Provides a full description of the WfnError (via concatenation of the
     // module, method, and action)
     const char *WfnError::what() const noexcept {
-        std::stringstream builder;
-        builder << module() << " - " << method() << " - " << action();
-        return builder.str().c_str();
+        return _message.c_str();
     }
 }

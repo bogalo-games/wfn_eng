@@ -14,6 +14,8 @@ namespace wfn_eng {
         std::string _method;
         std::string _action;
 
+        std::string _message;
+
     public:
         ////
         // WfnError
