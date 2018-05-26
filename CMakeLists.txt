@@ -20,17 +20,19 @@ include_directories(
 )
 
 set(HEADERS
+  src/vulkan/util.hpp
   src/vulkan.hpp
   src/error.hpp
   src/sdl.hpp
 )
 
 set(SOURCES
+  src/vulkan/util/queue_family_indices.cpp
+  src/vulkan/util/swapchain_support.cpp
   src/vulkan/swapchain.cpp
   src/vulkan/device.cpp
   src/vulkan/base.cpp
   src/vulkan/core.cpp
-  src/vulkan/util.cpp
 
   src/sdl/window.cpp
 
