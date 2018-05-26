@@ -400,7 +400,15 @@ private:
             VK_SHARING_MODE_CONCURRENT
         );
 
-        createIndexBuffer();
+        indexBuffer = new wfn_eng::vulkan::util::Buffer(
+            core->device(),
+            indices.size() * sizeof(uint16_t),
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            VK_SHARING_MODE_CONCURRENT
+        );
+
+        indexBuffer->indirect_copy_from(core->device(), transferPool, indices.data());
 
         transferBuffer = new wfn_eng::vulkan::util::Buffer(
             core->device(),

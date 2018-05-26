@@ -138,14 +138,6 @@ namespace wfn_eng::vulkan::util {
         void unmap(Device&);
 
         ////
-        // void copy_from(Device&, T&)
-        //
-        // Copies the contents of the provided type into the buffer. Will fail
-        // if the bufer is not accessible from the CPU.
-        template<typename T>
-        void copy_from(Device&, T);
-
-        ////
         // void copy_to(Device&, VkCommandPool, Buffer&, VkDeviceSize, VkDeviceSize, VkDeviceSize)
         //
         // Copies the contents of this buffer to another buffer. Will halt
@@ -159,6 +151,23 @@ namespace wfn_eng::vulkan::util {
         // Copies the contents of this buffer to another buffer. Will halt
         // during the copy.
         void copy_to(Device&, VkCommandPool, Buffer&);
+
+        ////
+        // void copy_from(Device&, T)
+        //
+        // Copies the contents of the provided type into the buffer. Will fail
+        // if the bufer is not accessible from the CPU.
+        template <typename T>
+        void copy_from(Device&, T);
+
+        ////
+        // void indirect_copy_from(Device&, VkCommandPool, T)
+        //
+        // Copies information from the provided type into the buffer via
+        // copy_from and copy_to.
+        template <typename T>
+        void indirect_copy_from(Device&, VkCommandPool, T);
+
 
         // Rule of 5's.
         Buffer(const Buffer&) = delete;
