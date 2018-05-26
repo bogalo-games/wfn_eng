@@ -141,6 +141,7 @@ private:
     VkCommandPool vertexPool;
     VkCommandPool transferPool;
     wfn_eng::vulkan::util::Buffer *vertexBuffer;
+    wfn_eng::vulkan::util::Buffer *indexBuffer;
     wfn_eng::vulkan::util::Buffer *transferBuffer;
     std::vector<VkCommandBuffer> vertexCommands;
     std::vector<VkCommandBuffer> transferCommands;
@@ -151,9 +152,14 @@ private:
 
     // Vertex definition
     const std::vector<Vertex> vertices = {
-        { {  0.0f, -0.5f }, { 1.0f, 1.0f, 0.0f } },
-        { {  0.5f,  0.5f }, { 0.0f, 1.0f, 0.0f } },
-        { { -0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f } }
+        { { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+        { {  0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f } },
+        { {  0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f } },
+        { { -0.5f,  0.5f }, { 1.0f, 0.0f, 1.0f } }
+    };
+
+    const std::vector<uint16_t> indices = {
+        0, 1, 2, 2, 3, 0
     };
 
     ////
@@ -332,6 +338,27 @@ private:
             throw std::runtime_error("Failed to create graphics pipeline");
     }
 
+    void createIndexBuffer() {
+        indexBuffer = new wfn_eng::vulkan::util::Buffer(
+            core->device(),
+            indices.size() * sizeof(uint16_t),
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            VK_SHARING_MODE_CONCURRENT
+        );
+
+        wfn_eng::vulkan::util::Buffer stagingBuffer(
+            core->device(),
+            indices.size() * sizeof(uint16_t),
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            VK_SHARING_MODE_CONCURRENT
+        );
+
+        stagingBuffer.copy_from(core->device(), indices.data());
+        stagingBuffer.copy_to(core->device(), transferPool, *indexBuffer);
+    }
+
     void initCommandBuffers() {
         //
         // Creating the command pool
@@ -363,9 +390,6 @@ private:
         // Creating the vertex buffers
         //
         // VkPhysicalDevice physical, VkDevice device,
-        //                          VkDeviceSize size, VkBufferUsageFlags usage,
-        //                          VkMemoryPropertyFlags properties, VkBuffer& buffer,
-        //                          VkDeviceMemory& bufferMemory
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
         vertexBuffer = new wfn_eng::vulkan::util::Buffer(
@@ -375,6 +399,8 @@ private:
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VK_SHARING_MODE_CONCURRENT
         );
+
+        createIndexBuffer();
 
         transferBuffer = new wfn_eng::vulkan::util::Buffer(
             core->device(),
@@ -423,10 +449,13 @@ private:
             VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(vertexCommands[i], 0, 1, vertexBuffers, offsets);
 
-            vkCmdDraw(
+            vkCmdBindIndexBuffer(vertexCommands[i], indexBuffer->handle, 0, VK_INDEX_TYPE_UINT16);
+
+            vkCmdDrawIndexed(
                 vertexCommands[i],
-                static_cast<uint32_t>(vertices.size()),
+                static_cast<uint32_t>(indices.size()),
                 1,
+                0,
                 0,
                 0
             );
@@ -501,6 +530,7 @@ private:
 
     void cleanupCommandBuffers() {
         delete vertexBuffer;
+        delete indexBuffer;
         delete transferBuffer;
         vkDestroyCommandPool(core->device().logical(), transferPool, nullptr);
         vkDestroyCommandPool(core->device().logical(), vertexPool, nullptr);
@@ -533,10 +563,7 @@ private:
             mv_verts[i].pos = mv_verts[i].pos + pos + glm::vec2(dx , dy);
         }
 
-        void *data;
-        transferBuffer->map(core->device(), &data);
-        memcpy(data, mv_verts.data(), (size_t)transferBuffer->size);
-        transferBuffer->unmap(core->device());
+        transferBuffer->copy_from(core->device(), mv_verts.data());
 
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
