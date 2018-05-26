@@ -81,7 +81,13 @@ namespace wfn_eng::vulkan::util {
     //
     // Maps the data in this buffer (if able) to the provided memory range.
     void Buffer::map(Device& device, void **data) {
-        vkMapMemory(device.logical(), memory, 0, size, 0, data);
+        if (vkMapMemory(device.logical(), memory, 0, size, 0, data) != VK_SUCCESS) {
+            throw WfnError(
+                "wfn_eng::vulkan::util::Buffer",
+                "map",
+                "Failed to map memory"
+            );
+        }
     }
 
     ////
@@ -90,5 +96,71 @@ namespace wfn_eng::vulkan::util {
     // Unmaps the above mapped data.
     void Buffer::unmap(Device& device) {
         vkUnmapMemory(device.logical(), memory);
+    }
+
+    ////
+    // void copy_to(Device&, VkCommandPool, Buffer&, VkDeviceSize, VkDeviceSize, VkDeviceSize)
+    //
+    // Copies the contents of this buffer to another buffer. Will halt
+    // during the copy. Provides the option to specify source offset,
+    // destination offset, and copy size.
+    void Buffer::copy_to(Device& device, VkCommandPool transferPool, Buffer& buffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size) {
+        VkCommandBufferAllocateInfo allocInfo = {};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandPool = transferPool;
+        allocInfo.commandBufferCount = 1;
+
+        VkCommandBuffer commandBuffer;
+        if (vkAllocateCommandBuffers(device.logical(), &allocInfo, &commandBuffer) != VK_SUCCESS) {
+            // TODO: Send error
+        }
+
+        VkCommandBufferBeginInfo beginInfo = {};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+            // TODO: Send error
+        }
+
+        VkBufferCopy copyRegion = {};
+        copyRegion.srcOffset = srcOffset;
+        copyRegion.dstOffset = dstOffset;
+        copyRegion.size = size;
+        vkCmdCopyBuffer(commandBuffer, handle, buffer.handle, 1, &copyRegion);
+
+        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+            // TODO: Send error
+        }
+
+        VkSubmitInfo submitInfo = {};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffer;
+
+        if (vkQueueSubmit(device.transferQueue(), 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+            // TODO: Send error
+        }
+
+        if (vkQueueWaitIdle(device.transferQueue()) != VK_SUCCESS) {
+            // TODO: Send error
+        }
+    }
+
+    ////
+    // void copy_to(Device&, VkCommandPool, Buffer&)
+    //
+    // Copies the contents of this buffer to another buffer. Will halt
+    // during the copy.
+    void Buffer::copy_to(Device& device, VkCommandPool transferPool, Buffer& buffer) {
+        copy_to(
+            device,
+            transferPool,
+            buffer,
+            0,
+            0,
+            size
+        );
     }
 }

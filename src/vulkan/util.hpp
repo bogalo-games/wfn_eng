@@ -128,6 +128,7 @@ namespace wfn_eng::vulkan::util {
         // void map(Device&, void **)
         //
         // Maps the data in this buffer (if able) to the provided memory range.
+        // Will fail if the buffer is not accessible from the CPU.
         void map(Device&, void **);
 
         ////
@@ -136,6 +137,29 @@ namespace wfn_eng::vulkan::util {
         // Unmaps the above mapped data.
         void unmap(Device&);
 
+        ////
+        // void copy_from(Device&, T&)
+        //
+        // Copies the contents of the provided type into the buffer. Will fail
+        // if the bufer is not accessible from the CPU.
+        template<typename T>
+        void copy_from(Device&, T);
+
+        ////
+        // void copy_to(Device&, VkCommandPool, Buffer&, VkDeviceSize, VkDeviceSize, VkDeviceSize)
+        //
+        // Copies the contents of this buffer to another buffer. Will halt
+        // during the copy. Provides the option to specify source offset,
+        // destination offset, and copy size.
+        void copy_to(Device&, VkCommandPool, Buffer&, VkDeviceSize, VkDeviceSize, VkDeviceSize);
+
+        ////
+        // void copy_to(Device&, VkCommandPool, Buffer&)
+        //
+        // Copies the contents of this buffer to another buffer. Will halt
+        // during the copy.
+        void copy_to(Device&, VkCommandPool, Buffer&);
+
         // Rule of 5's.
         Buffer(const Buffer&) = delete;
         Buffer(Buffer&&) = delete;
@@ -143,5 +167,7 @@ namespace wfn_eng::vulkan::util {
         Buffer& operator=(Buffer&&) = delete;
     };
 }
+
+#include "util/buffer.tpp"
 
 #endif
