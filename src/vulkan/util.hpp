@@ -3,17 +3,6 @@
 
 #include "../vulkan.hpp"
 
-namespace wfn_eng::vulkan {
-    // Note:
-    //   Just forward-declaring these classes here so that they can be
-    //   referenced in the the constructors of QueueFamilyIndices and
-    //   SwapchainSupport.
-    class Base;
-    class Device;
-    class Swapchain;
-    class Core;
-}
-
 namespace wfn_eng::vulkan::util {
     ////
     // struct QueueFamilyIndices
@@ -92,6 +81,49 @@ namespace wfn_eng::vulkan::util {
         // Returns whether the queried swapchain capabilities are sufficient
         // to use.
         bool sufficient();
+    };
+
+    ////
+    // struct Buffer
+    //
+    // Provides a wrapper around Vulkan's buffers to be more C++ like.
+    //
+    // TODO: Find a better way to decentralize destruction, like in ~Buffer(),
+    //       without having to maintain a bunch of references to the Device.
+    struct Buffer {
+        Device& _device;
+
+        ////
+        // VkBuffer handle
+        //
+        // The handle to the buffer itself.
+        VkBuffer handle;
+
+        ////
+        // VkDeviceMemory memory
+        //
+        // The handle to the buffer's memory region.
+        VkDeviceMemory memory;
+
+        ////
+        // Buffer(Device&, VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkSharingMode)
+        //
+        // Constructing a buffer, given the device, the size, usage flags, property
+        // flags, and sharing mode.
+        Buffer(Device&, VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkSharingMode);
+
+        ////
+        // ~Buffer()
+        //
+        //
+        ~Buffer();
+
+
+        // Rule of 5's.
+        Buffer(const Buffer&) = delete;
+        Buffer(Buffer&&) = delete;
+        Buffer& operator=(const Buffer&) = delete;
+        Buffer& operator=(Buffer&&) = delete;
     };
 }
 

@@ -7,8 +7,6 @@
 #include "error.hpp"
 #include "sdl.hpp"
 
-#include "vulkan/util.hpp"
-
 namespace wfn_eng::vulkan {
     ////
     // class Base

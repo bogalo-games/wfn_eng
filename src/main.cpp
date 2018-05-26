@@ -12,6 +12,7 @@
 #include <array>
 #include <set>
 
+#include "vulkan/util.hpp"
 #include "vulkan.hpp"
 #include "sdl.hpp"
 
@@ -82,57 +83,6 @@ static VkPipelineShaderStageCreateInfo shaderCreateInfo(VkShaderModule module, V
 }
 
 ////
-// uint32_t findMemoryType(uint32_t, VkMemoryPropertyFlags)
-//
-// Chooses the type of memory to use for our buffer.
-static uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-    VkPhysicalDeviceMemoryProperties memProps;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProps);
-
-    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++)
-        if ((typeFilter & (1 << i)) && (memProps.memoryTypes[i].propertyFlags & properties) == properties)
-            return i;
-
-    throw std::runtime_error("Failed to find a suitable memory type");
-}
-
-////
-// void createBuffer(VkDevicesize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer&, VkDeviceMemory&)
-//
-// Creates a VkBuffer (bound to the provided buffer) given the provided flags.
-static void createBuffer(VkPhysicalDevice physical, VkDevice device,
-                         VkDeviceSize size, VkBufferUsageFlags usage,
-                         VkMemoryPropertyFlags properties, VkBuffer& buffer,
-                         VkDeviceMemory& bufferMemory) {
-    // TODO
-    VkBufferCreateInfo bufferInfo = {};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
-
-    if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS)
-        throw std::runtime_error("Failed to create buffer");
-
-    VkMemoryRequirements memReq;
-    vkGetBufferMemoryRequirements(device, buffer, &memReq);
-
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memReq.size;
-    allocInfo.memoryTypeIndex = findMemoryType(
-        physical,
-        memReq.memoryTypeBits,
-        properties
-    );
-
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS)
-        throw std::runtime_error("Failed to create buffer memory");
-
-    vkBindBufferMemory(device, buffer, bufferMemory, 0);
-}
-
-////
 // struct Vertex
 //
 // A struct that contains relevant information for the location and color of
@@ -189,8 +139,7 @@ private:
     // Command buffers
     VkCommandPool commandPool;
     VkCommandPool transferPool;
-    VkBuffer vertexBuffer;
-    VkDeviceMemory vertexBufferMem;
+    wfn_eng::vulkan::util::Buffer *vertexBuffer;
     std::vector<VkCommandBuffer> commandBuffers;
     std::vector<VkCommandBuffer> transferBuffers;
 
@@ -417,31 +366,25 @@ private:
         //                          VkDeviceMemory& bufferMemory
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
-        createBuffer(
-            core->device().physical(),
-            core->device().logical(),
+        wfn_eng::vulkan::util::Buffer stagingBuffer(
+            core->device(),
             bufferSize,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            stagingBuffer,
-            stagingBufferMemory
+            VK_SHARING_MODE_CONCURRENT
         );
 
         void *data;
-        vkMapMemory(core->device().logical(), stagingBufferMemory, 0, bufferSize, 0, &data);
+        vkMapMemory(core->device().logical(), stagingBuffer.memory, 0, bufferSize, 0, &data);
         memcpy(data, vertices.data(), (size_t)bufferSize);
-        vkUnmapMemory(core->device().logical(), stagingBufferMemory);
+        vkUnmapMemory(core->device().logical(), stagingBuffer.memory);
 
-        createBuffer(
-            core->device().physical(),
-            core->device().logical(),
+        vertexBuffer = new wfn_eng::vulkan::util::Buffer(
+            core->device(),
             bufferSize,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            vertexBuffer,
-            vertexBufferMem
+            VK_SHARING_MODE_CONCURRENT
         );
 
         //
@@ -479,7 +422,7 @@ private:
             vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
             vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-            VkBuffer vertexBuffers[] = { vertexBuffer };
+            VkBuffer vertexBuffers[] = { vertexBuffer->handle };
             VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
@@ -514,7 +457,7 @@ private:
         copyRegion.srcOffset = 0;
         copyRegion.dstOffset = 0;
         copyRegion.size = bufferSize;
-        vkCmdCopyBuffer(transferBuffers[0], stagingBuffer, vertexBuffer, 1, &copyRegion);
+        vkCmdCopyBuffer(transferBuffers[0], stagingBuffer.handle, vertexBuffer->handle, 1, &copyRegion);
 
         if (vkEndCommandBuffer(transferBuffers[0]) != VK_SUCCESS)
             throw std::runtime_error("Failed to record transfer buffer");
@@ -565,8 +508,7 @@ private:
     }
 
     void cleanupCommandBuffers() {
-        vkDestroyBuffer(core->device().logical(), vertexBuffer, nullptr);
-        vkFreeMemory(core->device().logical(), vertexBufferMem, nullptr);
+        delete vertexBuffer;
         vkDestroyCommandPool(core->device().logical(), commandPool, nullptr);
     }
 

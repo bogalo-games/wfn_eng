@@ -2,7 +2,7 @@
 
 #include <set>
 
-#include <iostream>
+#include "util.hpp"
 
 ////
 // bool checkExtensionSupport(VkPhysicalDevice)

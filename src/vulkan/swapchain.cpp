@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "util.hpp"
+
 ////
 // VkSurfaceFormatKHR chooseSurfaceFormat(std::vector<VkSurfaceFormatKHR>&)
 //
