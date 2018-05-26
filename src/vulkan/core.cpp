@@ -25,6 +25,7 @@ namespace wfn_eng::vulkan {
         _base = new Base(window);
         _device = new Device(base());
         _swapchain = new Swapchain(base(), device());
+        _commandPools = new CommandPools(base(), device());
     }
 
     ////
@@ -32,43 +33,10 @@ namespace wfn_eng::vulkan {
     //
     // Handles the destruction of the Base, Device, and Swapchain.
     Core::~Core() {
+        delete _commandPools;
         delete _swapchain;
         delete _device;
         delete _base;
-    }
-
-    ////
-    // Base& base()
-    //
-    // Returns the Base reference.
-    Base& Core::base() { return *_base; }
-
-    ////
-    // Device& device()
-    //
-    // Returns the Device reference.
-    Device& Core::device() { return *_device; }
-
-    ////
-    // Swapchain& swapchain()
-    //
-    // Returns the Swapchain reference.
-    Swapchain& Core::swapchain() { return *_swapchain; }
-
-    ////
-    // void initialize(sdl::Window)
-    //
-    // Initializes the Core given reference to an SDL window.
-    void Core::initialize(sdl::Window& window) {
-        if (_core != nullptr) {
-            throw WfnError(
-                "wfn_eng::vulkan::Core",
-                "initialize",
-                "Cannot reinitialize Core"
-            );
-        }
-
-        _core = new Core(window);
     }
 
     ////
@@ -101,5 +69,46 @@ namespace wfn_eng::vulkan {
         }
 
         delete Core::_core;
+        Core::_core = nullptr;
+    }
+
+    ////
+    // Base& base()
+    //
+    // Returns the Base reference.
+    Base& Core::base() { return *_base; }
+
+    ////
+    // Device& device()
+    //
+    // Returns the Device reference.
+    Device& Core::device() { return *_device; }
+
+    ////
+    // Swapchain& swapchain()
+    //
+    // Returns the Swapchain reference.
+    Swapchain& Core::swapchain() { return *_swapchain; }
+
+    ////
+    // CommandPools& commandPools();
+    //
+    // Returns the CommandPools reference.
+    CommandPools& Core::commandPools() { return *_commandPools; }
+
+    ////
+    // void initialize(sdl::Window)
+    //
+    // Initializes the Core given reference to an SDL window.
+    void Core::initialize(sdl::Window& window) {
+        if (_core != nullptr) {
+            throw WfnError(
+                "wfn_eng::vulkan::Core",
+                "initialize",
+                "Cannot reinitialize Core"
+            );
+        }
+
+        _core = new Core(window);
     }
 }

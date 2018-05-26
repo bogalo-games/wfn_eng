@@ -238,6 +238,41 @@ namespace wfn_eng::vulkan {
     };
 
     ////
+    // CommandPools
+    //
+    // Provides a wrapper around the graphics and transfer command pools.
+    class CommandPools {
+        VkCommandPool _graphics;
+        VkCommandPool _transfer;
+
+    public:
+        ////
+        // CommandPools(Device&)
+        //
+        // Constructs the command pools for graphics and transfer command
+        // buffers.
+        CommandPools(Base&, Device&);
+
+        ////
+        // ~CommandPools()
+        //
+        // Destroys the graphics and transfer command pools.
+        ~CommandPools();
+
+        ////
+        // VkCommandPool& graphics()
+        //
+        // Provides reference to the graphics command pool.
+        VkCommandPool& graphics();
+
+        ////
+        // VkCommandPool& transfer()
+        //
+        // Provides reference to the transfer command pool.
+        VkCommandPool& transfer();
+    };
+
+    ////
     // Core
     //
     // A wrapper around the Base, Device, and Swapchain implementations to
@@ -249,6 +284,7 @@ namespace wfn_eng::vulkan {
         Base *_base;
         Device *_device;
         Swapchain *_swapchain;
+        CommandPools *_commandPools;
 
         ////
         // Core(wnf_eng::sdl::Window&)
@@ -305,6 +341,12 @@ namespace wfn_eng::vulkan {
         //
         // Returns the Swapchain reference.
         Swapchain& swapchain();
+
+        ////
+        // CommandPools& commandPools();
+        //
+        // Returns the CommandPools reference.
+        CommandPools& commandPools();
 
 
         // Following Rule of 5's

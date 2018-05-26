@@ -142,12 +142,10 @@ private:
     VkPipeline graphicsPipeline;
 
     // Command buffers
-    VkCommandPool vertexPool;
-    VkCommandPool transferPool;
-    util::Buffer *vertexBuffer;
+    util::Buffer *graphicsBuffer;
     util::Buffer *indexBuffer;
     util::Buffer *transferBuffer;
-    std::vector<VkCommandBuffer> vertexCommands;
+    std::vector<VkCommandBuffer> graphicsCommands;
     std::vector<VkCommandBuffer> transferCommands;
 
     // Semaphore
@@ -360,34 +358,14 @@ private:
         );
 
         stagingBuffer.copy_from(Core::instance().device(), indices.data());
-        stagingBuffer.copy_to(Core::instance().device(), transferPool, *indexBuffer);
+        stagingBuffer.copy_to(Core::instance().device(), Core::instance().commandPools().transfer(), *indexBuffer);
     }
 
     void initCommandBuffers() {
         //
         // Creating the command pool
         //
-        util::QueueFamilyIndices queueFamily(
-            Core::instance().base().surface(),
-            Core::instance().device().physical()
-        );
-
-        VkCommandPoolCreateInfo vertexPoolInfo = {};
-        vertexPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        vertexPoolInfo.queueFamilyIndex = queueFamily.graphicsFamily;
-        vertexPoolInfo.flags = 0;
-
-        VkCommandPoolCreateInfo transferPoolInfo = {};
-        transferPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        transferPoolInfo.queueFamilyIndex = queueFamily.transferFamily;
-        transferPoolInfo.flags = 0;
-
-        if (vkCreateCommandPool(Core::instance().device().logical(), &vertexPoolInfo, nullptr, &vertexPool) != VK_SUCCESS)
-            throw std::runtime_error("Failed to create command pool");
-        if (vkCreateCommandPool(Core::instance().device().logical(), &transferPoolInfo, nullptr, &transferPool) != VK_SUCCESS)
-            throw std::runtime_error("Failed to create transfer pool");
-
-        vertexCommands.resize(Core::instance().swapchain().frameBuffers().size());
+        graphicsCommands.resize(Core::instance().swapchain().frameBuffers().size());
         transferCommands.resize(1); // TODO: Change this later?
 
         //
@@ -396,7 +374,7 @@ private:
         // VkPhysicalDevice physical, VkDevice device,
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-        vertexBuffer = new util::Buffer(
+        graphicsBuffer = new util::Buffer(
             Core::instance().device(),
             bufferSize,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -412,7 +390,7 @@ private:
             VK_SHARING_MODE_CONCURRENT
         );
 
-        indexBuffer->indirect_copy_from(Core::instance().device(), transferPool, indices.data());
+        indexBuffer->indirect_copy_from(Core::instance().device(), Core::instance().commandPools().transfer(), indices.data());
 
         transferBuffer = new util::Buffer(
             Core::instance().device(),
@@ -427,20 +405,20 @@ private:
         //
         VkCommandBufferAllocateInfo allocateInfo = {};
         allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocateInfo.commandPool = vertexPool;
+        allocateInfo.commandPool = Core::instance().commandPools().graphics();
         allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocateInfo.commandBufferCount = (uint32_t)vertexCommands.size();
+        allocateInfo.commandBufferCount = (uint32_t)graphicsCommands.size();
 
-        if (vkAllocateCommandBuffers(Core::instance().device().logical(), &allocateInfo, vertexCommands.data()))
+        if (vkAllocateCommandBuffers(Core::instance().device().logical(), &allocateInfo, graphicsCommands.data()))
             throw std::runtime_error("Failed to allocate command buffers");
 
-        for (size_t i = 0; i < vertexCommands.size(); i++) {
+        for (size_t i = 0; i < graphicsCommands.size(); i++) {
             VkCommandBufferBeginInfo beginInfo = {};
             beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
             beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
             beginInfo.pInheritanceInfo = VK_NULL_HANDLE;
 
-            if (vkBeginCommandBuffer(vertexCommands[i], &beginInfo) != VK_SUCCESS)
+            if (vkBeginCommandBuffer(graphicsCommands[i], &beginInfo) != VK_SUCCESS)
                 throw std::runtime_error("Failed to begin recording command buffer");
 
             VkRenderPassBeginInfo renderPassInfo = {};
@@ -454,17 +432,17 @@ private:
             renderPassInfo.clearValueCount = 1;
             renderPassInfo.pClearValues = &clearColor;
 
-            vkCmdBeginRenderPass(vertexCommands[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-            vkCmdBindPipeline(vertexCommands[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+            vkCmdBeginRenderPass(graphicsCommands[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBindPipeline(graphicsCommands[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-            VkBuffer vertexBuffers[] = { vertexBuffer->handle };
+            VkBuffer graphicsBuffers[] = { graphicsBuffer->handle };
             VkDeviceSize offsets[] = { 0 };
-            vkCmdBindVertexBuffers(vertexCommands[i], 0, 1, vertexBuffers, offsets);
+            vkCmdBindVertexBuffers(graphicsCommands[i], 0, 1, graphicsBuffers, offsets);
 
-            vkCmdBindIndexBuffer(vertexCommands[i], indexBuffer->handle, 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindIndexBuffer(graphicsCommands[i], indexBuffer->handle, 0, VK_INDEX_TYPE_UINT16);
 
             vkCmdDrawIndexed(
-                vertexCommands[i],
+                graphicsCommands[i],
                 static_cast<uint32_t>(indices.size()),
                 1,
                 0,
@@ -472,9 +450,9 @@ private:
                 0
             );
 
-            vkCmdEndRenderPass(vertexCommands[i]);
+            vkCmdEndRenderPass(graphicsCommands[i]);
 
-            if (vkEndCommandBuffer(vertexCommands[i]) != VK_SUCCESS)
+            if (vkEndCommandBuffer(graphicsCommands[i]) != VK_SUCCESS)
                 throw std::runtime_error("Failed to record command buffer");
         }
 
@@ -484,7 +462,7 @@ private:
         VkCommandBufferAllocateInfo transferInfo = {};
         transferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         transferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        transferInfo.commandPool = transferPool;
+        transferInfo.commandPool = Core::instance().commandPools().transfer();
         transferInfo.commandBufferCount = 1;
 
         vkAllocateCommandBuffers(Core::instance().device().logical(), &transferInfo, transferCommands.data());
@@ -498,7 +476,7 @@ private:
         copyRegion.srcOffset = 0;
         copyRegion.dstOffset = 0;
         copyRegion.size = bufferSize;
-        vkCmdCopyBuffer(transferCommands[0], transferBuffer->handle, vertexBuffer->handle, 1, &copyRegion);
+        vkCmdCopyBuffer(transferCommands[0], transferBuffer->handle, graphicsBuffer->handle, 1, &copyRegion);
 
         if (vkEndCommandBuffer(transferCommands[0]) != VK_SUCCESS)
             throw std::runtime_error("Failed to record transfer buffer");
@@ -541,11 +519,9 @@ private:
     }
 
     void cleanupCommandBuffers() {
-        delete vertexBuffer;
+        delete graphicsBuffer;
         delete indexBuffer;
         delete transferBuffer;
-        vkDestroyCommandPool(Core::instance().device().logical(), transferPool, nullptr);
-        vkDestroyCommandPool(Core::instance().device().logical(), vertexPool, nullptr);
     }
 
     void cleanupSemaphores() {
@@ -606,7 +582,7 @@ private:
         submitInfo.pWaitDstStageMask = waitStages;
 
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &vertexCommands[imageIndex];
+        submitInfo.pCommandBuffers = &graphicsCommands[imageIndex];
 
         VkSemaphore signalSemaphores[] = { renderFinished };
         submitInfo.signalSemaphoreCount = 1;

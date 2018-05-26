@@ -30,7 +30,8 @@ set(SOURCES
   src/vulkan/util/queue_family_indices.cpp
   src/vulkan/util/swapchain_support.cpp
   src/vulkan/util/buffer.cpp
-  
+
+  src/vulkan/command_pools.cpp
   src/vulkan/swapchain.cpp
   src/vulkan/device.cpp
   src/vulkan/base.cpp
