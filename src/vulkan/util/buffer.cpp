@@ -113,7 +113,11 @@ namespace wfn_eng::vulkan::util {
 
         VkCommandBuffer commandBuffer;
         if (vkAllocateCommandBuffers(device.logical(), &allocInfo, &commandBuffer) != VK_SUCCESS) {
-            // TODO: Send error
+            throw WfnError(
+                "wfn_eng::vulkan::util::Buffer",
+                "copy_to",
+                "Failed to allocate copy command buffer"
+            );
         }
 
         VkCommandBufferBeginInfo beginInfo = {};
@@ -121,7 +125,11 @@ namespace wfn_eng::vulkan::util {
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
         if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-            // TODO: Send error
+            throw WfnError(
+                "wfn_eng::vulkan::util::Buffer",
+                "copy_to",
+                "Failed to begin command buffer"
+            );
         }
 
         VkBufferCopy copyRegion = {};
@@ -131,7 +139,11 @@ namespace wfn_eng::vulkan::util {
         vkCmdCopyBuffer(commandBuffer, handle, buffer.handle, 1, &copyRegion);
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-            // TODO: Send error
+            throw WfnError(
+                "wfn_eng::vulkan::util::Buffer",
+                "copy_to",
+                "Failed to end command buffer"
+            );
         }
 
         VkSubmitInfo submitInfo = {};
@@ -140,11 +152,19 @@ namespace wfn_eng::vulkan::util {
         submitInfo.pCommandBuffers = &commandBuffer;
 
         if (vkQueueSubmit(device.transferQueue(), 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
-            // TODO: Send error
+            throw WfnError(
+                "wfn_eng::vulkan::util::Buffer",
+                "copy_to",
+                "Failed to submit command buffer"
+            );
         }
 
         if (vkQueueWaitIdle(device.transferQueue()) != VK_SUCCESS) {
-            // TODO: Send error
+            throw WfnError(
+                "wfn_eng::vulkan::util::Buffer",
+                "copy_to",
+                "Failed to wait for queue idle"
+            );
         }
     }
 
