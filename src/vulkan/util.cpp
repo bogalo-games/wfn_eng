@@ -28,16 +28,33 @@ namespace wfn_eng::vulkan::util {
         );
 
         for (int i = 0; i < queueFamilies.size(); i++) {
+            // Selecting the graphics family
             if (queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
                 graphicsFamily = i;
 
+            // Selecting the presentation family
             VkBool32 presentationSupport = false;
             vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentationSupport);
             if (queueFamilies[i].queueCount > 0 && presentationSupport)
                 presentationFamily = i;
 
+            // Selecting the transfer family
+            if (queueFamilies[i].queueCount > 0 &&
+                queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
+
+                transferFamily = i;
+            }
+
             if (sufficient())
                 break;
+        }
+
+        if (!sufficient()) {
+            throw WfnError(
+                "wfn_end::vulkan::util::QueueFamilyIndices",
+                "QueueFamilyIndices",
+                "Could not find a suitable set of queue indices"
+            );
         }
     }
 
@@ -55,7 +72,9 @@ namespace wfn_eng::vulkan::util {
     // Checks if the queue family's indices are sufficient for use in
     // the rest of the program.
     bool QueueFamilyIndices::sufficient() {
-        return graphicsFamily >= 0 && presentationFamily >= 0;
+        return graphicsFamily >= 0 &&
+               presentationFamily >= 0 &&
+               transferFamily >= 0;
     }
 
     ////

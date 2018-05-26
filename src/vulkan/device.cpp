@@ -2,6 +2,8 @@
 
 #include <set>
 
+#include <iostream>
+
 ////
 // bool checkExtensionSupport(VkPhysicalDevice)
 //
@@ -44,7 +46,7 @@ namespace wfn_eng::vulkan {
     //
     // A container for the device-related features of Vulkan, that includes the
     // physical and logical devices, along with their relevant queues.
-    
+
     ////
     // makePhysicalDevice
     //
@@ -88,7 +90,11 @@ namespace wfn_eng::vulkan {
         wfn_eng::vulkan::util::QueueFamilyIndices indices(base.surface(), physical());
 
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-        std::set<int> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentationFamily};
+        std::set<int> uniqueQueueFamilies = {
+            indices.graphicsFamily,
+            indices.presentationFamily,
+            indices.transferFamily
+        };
 
         float queuePriority = 1.0f;
         for (int queueFamily: uniqueQueueFamilies) {
@@ -134,6 +140,13 @@ namespace wfn_eng::vulkan {
             0,
             &_presentationQueue
         );
+
+        vkGetDeviceQueue(
+            logical(),
+            indices.transferFamily,
+            0,
+            &_transferQueue
+        );
     }
 
     ////
@@ -176,4 +189,10 @@ namespace wfn_eng::vulkan {
     //
     // Getting the presentation queue.
     VkQueue& Device::presentationQueue() { return _presentationQueue; }
+
+    ////
+    // VkQueue transferQueue()
+    //
+    // Getting the transfer queue.
+    VkQueue& Device::transferQueue() { return _transferQueue; }
 }

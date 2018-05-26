@@ -38,6 +38,12 @@ namespace wfn_eng::vulkan {
             int presentationFamily = -1;
 
             ////
+            // int transferFamily
+            //
+            // The index of the tranfer queue.
+            int transferFamily = -1;
+
+            ////
             // QueueFamilyIndices(VkSurfaceKHR, VkPhysicalDevice)
             //
             // Given the reference to a VkSurfaceKHR and a VkPhysicalDevice,
@@ -150,6 +156,7 @@ namespace wfn_eng::vulkan {
         VkDevice _logical;
         VkQueue _graphicsQueue;
         VkQueue _presentationQueue;
+        VkQueue _transferQueue;
 
         ////
         // makePhysicalDevice
@@ -200,6 +207,12 @@ namespace wfn_eng::vulkan {
         //
         // Getting the presentation queue.
         VkQueue& presentationQueue();
+
+        ////
+        // VkQueue transferQueue()
+        //
+        // Getting the transfer queue.
+        VkQueue& transferQueue();
 
 
         // Following Rule of 5's
