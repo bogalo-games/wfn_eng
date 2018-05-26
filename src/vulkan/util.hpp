@@ -129,6 +129,11 @@ namespace wfn_eng::vulkan::util {
         //
         // Maps the data in this buffer (if able) to the provided memory range.
         void map(Device&, void **);
+
+        ////
+        // void unmap(Device&)
+        //
+        // Unmaps the above mapped data.
         void unmap(Device&);
 
         // Rule of 5's.
