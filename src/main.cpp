@@ -23,6 +23,7 @@ const int HEIGHT = 480;
 #define DEBUG
 
 using namespace wfn_eng;
+using namespace wfn_eng::sdl;
 using namespace wfn_eng::vulkan;
 using namespace wfn_eng::vulkan::util;
 
@@ -58,7 +59,7 @@ static std::vector<char> readFile(std::string path) {
 // makeShader
 //
 // Constructs a VkShaderModule.
-static VkShaderModule makeShader(wfn_eng::vulkan::Core& core, const std::vector<char>& code) {
+static VkShaderModule makeShader(Core& core, const std::vector<char>& code) {
     VkShaderModuleCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
@@ -133,7 +134,7 @@ struct Vertex {
 
 class HelloTriangleApplication {
 private:
-    wfn_eng::sdl::Window *window;
+    Window *window;
 
     // Graphics pipeline
     VkRenderPass renderPass;
@@ -143,9 +144,9 @@ private:
     // Command buffers
     VkCommandPool vertexPool;
     VkCommandPool transferPool;
-    wfn_eng::vulkan::util::Buffer *vertexBuffer;
-    wfn_eng::vulkan::util::Buffer *indexBuffer;
-    wfn_eng::vulkan::util::Buffer *transferBuffer;
+    util::Buffer *vertexBuffer;
+    util::Buffer *indexBuffer;
+    util::Buffer *transferBuffer;
     std::vector<VkCommandBuffer> vertexCommands;
     std::vector<VkCommandBuffer> transferCommands;
 
@@ -342,7 +343,7 @@ private:
     }
 
     void createIndexBuffer() {
-        indexBuffer = new wfn_eng::vulkan::util::Buffer(
+        indexBuffer = new util::Buffer(
             Core::instance().device(),
             indices.size() * sizeof(uint16_t),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
@@ -350,7 +351,7 @@ private:
             VK_SHARING_MODE_CONCURRENT
         );
 
-        wfn_eng::vulkan::util::Buffer stagingBuffer(
+        util::Buffer stagingBuffer(
             Core::instance().device(),
             indices.size() * sizeof(uint16_t),
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -366,7 +367,7 @@ private:
         //
         // Creating the command pool
         //
-        wfn_eng::vulkan::util::QueueFamilyIndices queueFamily(
+        util::QueueFamilyIndices queueFamily(
             Core::instance().base().surface(),
             Core::instance().device().physical()
         );
@@ -395,7 +396,7 @@ private:
         // VkPhysicalDevice physical, VkDevice device,
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-        vertexBuffer = new wfn_eng::vulkan::util::Buffer(
+        vertexBuffer = new util::Buffer(
             Core::instance().device(),
             bufferSize,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -403,7 +404,7 @@ private:
             VK_SHARING_MODE_CONCURRENT
         );
 
-        indexBuffer = new wfn_eng::vulkan::util::Buffer(
+        indexBuffer = new util::Buffer(
             Core::instance().device(),
             indices.size() * sizeof(uint16_t),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
@@ -413,7 +414,7 @@ private:
 
         indexBuffer->indirect_copy_from(Core::instance().device(), transferPool, indices.data());
 
-        transferBuffer = new wfn_eng::vulkan::util::Buffer(
+        transferBuffer = new util::Buffer(
             Core::instance().device(),
             bufferSize,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -515,7 +516,7 @@ private:
     }
 
     void init() {
-        wfn_eng::sdl::WindowConfig cfg {
+        WindowConfig cfg {
             .vulkanPath = "vulkan/macOS/lib/libvulkan.1.dylib",
             .windowName = "Testing Vulkan",
             .width = WIDTH,
@@ -523,8 +524,8 @@ private:
             .flags = 0
         };
 
-        window = new wfn_eng::sdl::Window(cfg);
-        wfn_eng::vulkan::Core::initialize(*window);
+        window = new Window(cfg);
+        Core::initialize(*window);
 
         initGraphicsPipeline();
         initCommandBuffers();
@@ -557,7 +558,7 @@ private:
         cleanupCommandBuffers();
         cleanupSemaphores();
 
-        wfn_eng::vulkan::Core::destroy();
+        Core::destroy();
         delete window;
     }
 
@@ -693,7 +694,7 @@ int main() {
     } catch (const std::runtime_error& e) {
         std::cerr << "App error: " << e.what() << std::endl;
         return 1;
-    } catch (const wfn_eng::WfnError& e) {
+    } catch (const WfnError& e) {
         std::cout << e.what() << std::endl;
         return 1;
     }

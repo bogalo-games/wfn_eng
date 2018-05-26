@@ -87,12 +87,7 @@ namespace wfn_eng::vulkan::util {
     // struct Buffer
     //
     // Provides a wrapper around Vulkan's buffers to be more C++ like.
-    //
-    // TODO: Find a better way to decentralize destruction, like in ~Buffer(),
-    //       without having to maintain a bunch of references to the Device.
     struct Buffer {
-        Device& _device;
-
         ////
         // VkDeviceSize size
         //

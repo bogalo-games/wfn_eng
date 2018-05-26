@@ -26,8 +26,7 @@ namespace wfn_eng::vulkan::util {
     //
     // Constructing a buffer, given the device, the size, usage flags, property
     // flags, and sharing mode.
-    Buffer::Buffer(Device& device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, VkSharingMode sharingMode) :
-            _device(device) {
+    Buffer::Buffer(Device& device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, VkSharingMode sharingMode) {
         this->size = size;
 
         VkBufferCreateInfo bufferInfo = {};
@@ -72,8 +71,9 @@ namespace wfn_eng::vulkan::util {
     //
     //
     Buffer::~Buffer() {
-        vkDestroyBuffer(_device.logical(), handle, nullptr);
-        vkFreeMemory(_device.logical(), memory, nullptr);
+        auto device = Core::instance().device().logical();
+        vkDestroyBuffer(device, handle, nullptr);
+        vkFreeMemory(device, memory, nullptr);
     }
 
     ////
