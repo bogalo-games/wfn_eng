@@ -28,6 +28,8 @@ namespace wfn_eng::vulkan::util {
     // flags, and sharing mode.
     Buffer::Buffer(Device& device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, VkSharingMode sharingMode) :
             _device(device) {
+        this->size = size;
+
         VkBufferCreateInfo bufferInfo = {};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = size;
@@ -72,5 +74,21 @@ namespace wfn_eng::vulkan::util {
     Buffer::~Buffer() {
         vkDestroyBuffer(_device.logical(), handle, nullptr);
         vkFreeMemory(_device.logical(), memory, nullptr);
+    }
+
+    ////
+    // void map(Device&, void **)
+    //
+    // Maps the data in this buffer (if able) to the provided memory range.
+    void Buffer::map(Device& device, void **data) {
+        vkMapMemory(device.logical(), memory, 0, size, 0, data);
+    }
+
+    ////
+    // void unmap(Device&)
+    //
+    // Unmaps the above mapped data.
+    void Buffer::unmap(Device& device) {
+        vkUnmapMemory(device.logical(), memory);
     }
 }

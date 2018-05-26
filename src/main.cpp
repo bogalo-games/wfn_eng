@@ -10,6 +10,7 @@
 #include <fstream>
 #include <vector>
 #include <array>
+#include <cmath>
 #include <set>
 
 #include "vulkan/util.hpp"
@@ -137,11 +138,12 @@ private:
     VkPipeline graphicsPipeline;
 
     // Command buffers
-    VkCommandPool commandPool;
+    VkCommandPool vertexPool;
     VkCommandPool transferPool;
     wfn_eng::vulkan::util::Buffer *vertexBuffer;
-    std::vector<VkCommandBuffer> commandBuffers;
-    std::vector<VkCommandBuffer> transferBuffers;
+    wfn_eng::vulkan::util::Buffer *transferBuffer;
+    std::vector<VkCommandBuffer> vertexCommands;
+    std::vector<VkCommandBuffer> transferCommands;
 
     // Semaphore
     VkSemaphore imageAvailable;
@@ -339,23 +341,23 @@ private:
             core->device().physical()
         );
 
-        VkCommandPoolCreateInfo commandPoolInfo = {};
-        commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        commandPoolInfo.queueFamilyIndex = queueFamily.graphicsFamily;
-        commandPoolInfo.flags = 0;
+        VkCommandPoolCreateInfo vertexPoolInfo = {};
+        vertexPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        vertexPoolInfo.queueFamilyIndex = queueFamily.graphicsFamily;
+        vertexPoolInfo.flags = 0;
 
         VkCommandPoolCreateInfo transferPoolInfo = {};
         transferPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         transferPoolInfo.queueFamilyIndex = queueFamily.transferFamily;
         transferPoolInfo.flags = 0;
 
-        if (vkCreateCommandPool(core->device().logical(), &commandPoolInfo, nullptr, &commandPool) != VK_SUCCESS)
+        if (vkCreateCommandPool(core->device().logical(), &vertexPoolInfo, nullptr, &vertexPool) != VK_SUCCESS)
             throw std::runtime_error("Failed to create command pool");
         if (vkCreateCommandPool(core->device().logical(), &transferPoolInfo, nullptr, &transferPool) != VK_SUCCESS)
             throw std::runtime_error("Failed to create transfer pool");
 
-        commandBuffers.resize(core->swapchain().frameBuffers().size());
-        transferBuffers.resize(1); // TODO: Change this later?
+        vertexCommands.resize(core->swapchain().frameBuffers().size());
+        transferCommands.resize(1); // TODO: Change this later?
 
         //
         // Creating the vertex buffers
@@ -366,19 +368,6 @@ private:
         //                          VkDeviceMemory& bufferMemory
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-        wfn_eng::vulkan::util::Buffer stagingBuffer(
-            core->device(),
-            bufferSize,
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            VK_SHARING_MODE_CONCURRENT
-        );
-
-        void *data;
-        vkMapMemory(core->device().logical(), stagingBuffer.memory, 0, bufferSize, 0, &data);
-        memcpy(data, vertices.data(), (size_t)bufferSize);
-        vkUnmapMemory(core->device().logical(), stagingBuffer.memory);
-
         vertexBuffer = new wfn_eng::vulkan::util::Buffer(
             core->device(),
             bufferSize,
@@ -387,25 +376,33 @@ private:
             VK_SHARING_MODE_CONCURRENT
         );
 
+        transferBuffer = new wfn_eng::vulkan::util::Buffer(
+            core->device(),
+            bufferSize,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            VK_SHARING_MODE_CONCURRENT
+        );
+
         //
-        // Creating the command buffers
+        // Creating the draw commands
         //
         VkCommandBufferAllocateInfo allocateInfo = {};
         allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocateInfo.commandPool = commandPool;
+        allocateInfo.commandPool = vertexPool;
         allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocateInfo.commandBufferCount = (uint32_t)commandBuffers.size();
+        allocateInfo.commandBufferCount = (uint32_t)vertexCommands.size();
 
-        if (vkAllocateCommandBuffers(core->device().logical(), &allocateInfo, commandBuffers.data()))
+        if (vkAllocateCommandBuffers(core->device().logical(), &allocateInfo, vertexCommands.data()))
             throw std::runtime_error("Failed to allocate command buffers");
 
-        for (size_t i = 0; i < commandBuffers.size(); i++) {
+        for (size_t i = 0; i < vertexCommands.size(); i++) {
             VkCommandBufferBeginInfo beginInfo = {};
             beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
             beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
             beginInfo.pInheritanceInfo = VK_NULL_HANDLE;
 
-            if (vkBeginCommandBuffer(commandBuffers[i], &beginInfo) != VK_SUCCESS)
+            if (vkBeginCommandBuffer(vertexCommands[i], &beginInfo) != VK_SUCCESS)
                 throw std::runtime_error("Failed to begin recording command buffer");
 
             VkRenderPassBeginInfo renderPassInfo = {};
@@ -419,56 +416,51 @@ private:
             renderPassInfo.clearValueCount = 1;
             renderPassInfo.pClearValues = &clearColor;
 
-            vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-            vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+            vkCmdBeginRenderPass(vertexCommands[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBindPipeline(vertexCommands[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
             VkBuffer vertexBuffers[] = { vertexBuffer->handle };
             VkDeviceSize offsets[] = { 0 };
-            vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+            vkCmdBindVertexBuffers(vertexCommands[i], 0, 1, vertexBuffers, offsets);
 
             vkCmdDraw(
-                commandBuffers[i],
+                vertexCommands[i],
                 static_cast<uint32_t>(vertices.size()),
                 1,
                 0,
                 0
             );
 
-            vkCmdEndRenderPass(commandBuffers[i]);
+            vkCmdEndRenderPass(vertexCommands[i]);
 
-            if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS)
+            if (vkEndCommandBuffer(vertexCommands[i]) != VK_SUCCESS)
                 throw std::runtime_error("Failed to record command buffer");
         }
 
+        //
+        // Creating the transfer command
+        //
         VkCommandBufferAllocateInfo transferInfo = {};
         transferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         transferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         transferInfo.commandPool = transferPool;
         transferInfo.commandBufferCount = 1;
 
-        vkAllocateCommandBuffers(core->device().logical(), &transferInfo, transferBuffers.data());
+        vkAllocateCommandBuffers(core->device().logical(), &transferInfo, transferCommands.data());
 
         VkCommandBufferBeginInfo beginInfo = {};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(transferBuffers[0], &beginInfo);
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+        vkBeginCommandBuffer(transferCommands[0], &beginInfo);
 
         VkBufferCopy copyRegion = {};
         copyRegion.srcOffset = 0;
         copyRegion.dstOffset = 0;
         copyRegion.size = bufferSize;
-        vkCmdCopyBuffer(transferBuffers[0], stagingBuffer.handle, vertexBuffer->handle, 1, &copyRegion);
+        vkCmdCopyBuffer(transferCommands[0], transferBuffer->handle, vertexBuffer->handle, 1, &copyRegion);
 
-        if (vkEndCommandBuffer(transferBuffers[0]) != VK_SUCCESS)
+        if (vkEndCommandBuffer(transferCommands[0]) != VK_SUCCESS)
             throw std::runtime_error("Failed to record transfer buffer");
-
-        VkSubmitInfo submitInfo = {};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = transferBuffers.data();
-
-        vkQueueSubmit(core->device().transferQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(core->device().transferQueue());
     }
 
     void initSemaphores() {
@@ -509,7 +501,9 @@ private:
 
     void cleanupCommandBuffers() {
         delete vertexBuffer;
-        vkDestroyCommandPool(core->device().logical(), commandPool, nullptr);
+        delete transferBuffer;
+        vkDestroyCommandPool(core->device().logical(), transferPool, nullptr);
+        vkDestroyCommandPool(core->device().logical(), vertexPool, nullptr);
     }
 
     void cleanupSemaphores() {
@@ -528,6 +522,30 @@ private:
 
     ////
     // Game Logic
+    void updatePosition(const glm::vec2& pos, uint32_t ticks) {
+        float t = ticks / 1000.0f;
+
+        std::vector<Vertex> mv_verts(vertices);
+        for (int i = 0; i < mv_verts.size(); i++) {
+            float dx = cos(t * (1 + i)) / 8;
+            float dy = cos(t * 2 * (1 + i)) / 8;
+
+            mv_verts[i].pos = mv_verts[i].pos + pos + glm::vec2(dx , dy);
+        }
+
+        void *data;
+        transferBuffer->map(core->device(), &data);
+        memcpy(data, mv_verts.data(), (size_t)transferBuffer->size);
+        transferBuffer->unmap(core->device());
+
+        VkSubmitInfo submitInfo = {};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = transferCommands.data();
+
+        vkQueueSubmit(core->device().transferQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+    }
+
     void drawFrame() {
         uint32_t imageIndex;
         vkAcquireNextImageKHR(
@@ -549,7 +567,7 @@ private:
         submitInfo.pWaitDstStageMask = waitStages;
 
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
+        submitInfo.pCommandBuffers = &vertexCommands[imageIndex];
 
         VkSemaphore signalSemaphores[] = { renderFinished };
         submitInfo.signalSemaphoreCount = 1;
@@ -576,16 +594,46 @@ private:
         bool quit = false;
         SDL_Event event;
 
+        bool up = false, down = false, left = false, right = false;
+        glm::vec2 pos(0, 0);
+
+        uint32_t last = 0;
         while (true) {
             while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_QUIT)
                     quit = true;
+                else if (event.type == SDL_KEYDOWN) {
+                    if (event.key.keysym.sym == SDLK_w) up = true;
+                    if (event.key.keysym.sym == SDLK_s) down = true;
+                    if (event.key.keysym.sym == SDLK_a) left = true;
+                    if (event.key.keysym.sym == SDLK_d) right = true;
+                } else if (event.type == SDL_KEYUP) {
+                    if (event.key.keysym.sym == SDLK_w) up = false;
+                    if (event.key.keysym.sym == SDLK_s) down = false;
+                    if (event.key.keysym.sym == SDLK_a) left = false;
+                    if (event.key.keysym.sym == SDLK_d) right = false;
+                }
             }
+
+            uint32_t curr = SDL_GetTicks();
+
+            int dx = 0;
+            if (left)  dx -= 1;
+            if (right) dx += 1;
+
+            int dy = 0;
+            if (up)   dy -= 1;
+            if (down) dy += 1;
+
+            pos += glm::vec2(dx, dy) * ((curr - last) / 1000.0f);
 
             if (quit == true)
                 break;
 
+            updatePosition(pos, curr);
             drawFrame();
+            last = curr;
+
             SDL_Delay(16);
         }
 

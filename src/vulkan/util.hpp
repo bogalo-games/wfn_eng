@@ -94,6 +94,12 @@ namespace wfn_eng::vulkan::util {
         Device& _device;
 
         ////
+        // VkDeviceSize size
+        //
+        // The size of the buffer.
+        VkDeviceSize size;
+
+        ////
         // VkBuffer handle
         //
         // The handle to the buffer itself.
@@ -115,9 +121,15 @@ namespace wfn_eng::vulkan::util {
         ////
         // ~Buffer()
         //
-        //
+        // Destroying the buffer.
         ~Buffer();
 
+        ////
+        // void map(Device&, void **)
+        //
+        // Maps the data in this buffer (if able) to the provided memory range.
+        void map(Device&, void **);
+        void unmap(Device&);
 
         // Rule of 5's.
         Buffer(const Buffer&) = delete;
