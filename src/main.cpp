@@ -42,7 +42,7 @@ private:
     Window *window;
 
     // Graphics pipeline
-    GraphicsPipeline *pipeline;
+    Pipeline *pipeline;
 
     // Command buffers
     Buffer *graphicsBuffer;
@@ -211,7 +211,7 @@ private:
         Core::initialize(*window);
 
         auto ad = Vertex::getAttributeDescriptions();
-        GraphicsPipelineConfig pipelineConfig {
+        PipelineConfig pipelineConfig {
             .vertexShaderPath = vertPath,
             .fragmentShaderPath = fragPath,
 
@@ -224,7 +224,7 @@ private:
             .attributeDescriptions = std::vector<VkVertexInputAttributeDescription>(ad.begin(), ad.end())
         };
 
-        pipeline = new GraphicsPipeline(pipelineConfig);
+        pipeline = new Pipeline(pipelineConfig);
 
         initCommandBuffers();
         initSemaphores();

@@ -29,7 +29,7 @@ set(HEADERS
 set(SOURCES
   src/vulkan/util/queue_family_indices.cpp
   src/vulkan/util/swapchain_support.cpp
-  src/vulkan/util/graphics_pipeline.cpp
+  src/vulkan/util/pipeline.cpp
   src/vulkan/util/buffer.cpp
   src/vulkan/util/shader.cpp
 

@@ -229,12 +229,12 @@ namespace wfn_eng::vulkan::util {
     };
 
     ////
-    // struct GraphicsPipelineConfig
+    // struct PipelineConfig
     //
     // Provides a configuration type to define the behavior of a
-    // GraphicsPipeline (including the VkRenderPasses, VkPipelineLayout, and the
+    // Pipeline (including the VkRenderPasses, VkPipelineLayout, and the
     // actual VkPipeline).
-    struct GraphicsPipelineConfig {
+    struct PipelineConfig {
         std::string vertexShaderPath;
         std::string fragmentShaderPath;
 
@@ -245,38 +245,38 @@ namespace wfn_eng::vulkan::util {
     };
 
     ////
-    // class GraphicsPipeline
+    // class Pipeline
     //
     // A wrapper around the VkPipeline that constructs a pipeline according to
-    // the information provided by a GraphicsPipelineConfig.
-    class GraphicsPipeline {
+    // the information provided by a PipelineConfig.
+    class Pipeline {
         std::vector<VkRenderPass> _renderPasses;
         VkPipelineLayout _layout;
-        VkPipeline _pipeline;
+        VkPipeline _handle;
 
-        void initRenderPasses(const GraphicsPipelineConfig&);
-        void initLayout(const GraphicsPipelineConfig&);
-        void initPipeline(const GraphicsPipelineConfig&);
+        void initRenderPasses(const PipelineConfig&);
+        void initLayout(const PipelineConfig&);
+        void initPipeline(const PipelineConfig&);
 
     public:
         ////
-        // GraphicsPipeline(GraphicsPipelineConfig)
+        // Pipeline(PipelineConfig)
         //
-        // Constructs a GraphicsPipeline with a custom GraphicsPipelineConfig.
-        GraphicsPipeline(GraphicsPipelineConfig);
+        // Constructs a Pipeline with a custom PipelineConfig.
+        Pipeline(PipelineConfig);
 
         ////
-        // GraphicsPipeline()
+        // Pipeline()
         //
-        // Constructs a GraphicsPipeline with the default
-        // GraphicsPipelineConfig.
-        GraphicsPipeline();
+        // Constructs a Pipeline with the default
+        // PipelineConfig.
+        Pipeline();
 
         ////
-        // ~GraphicsPipeline()
+        // ~Pipeline()
         //
         // Destroys the VkRenderPass, VkPipelineLayout, and VkPipeline.
-        ~GraphicsPipeline();
+        ~Pipeline();
 
         ////
         // std::vector<VkRenderPass>& renderPasses()

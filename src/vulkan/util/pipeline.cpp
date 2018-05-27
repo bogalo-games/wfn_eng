@@ -2,15 +2,15 @@
 
 namespace wfn_eng::vulkan::util {
     ////
-    // class GraphicsPipeline
+    // class Pipeline
     //
     // A wrapper around the VkPipeline that constructs a pipeline according to
-    // the information provided by a GraphicsPipelineConfig.
+    // the information provided by a PipelineConfig.
 
-    void GraphicsPipeline::initRenderPasses(const GraphicsPipelineConfig& config) {
+    void Pipeline::initRenderPasses(const PipelineConfig& config) {
         if (config.renderPassConfigs.size() == 0) {
             throw WfnError(
-                "wfn_eng::engine::GraphicsPipeline",
+                "wfn_eng::engine::Pipeline",
                 "initRenderPasses",
                 "You must have at least one render pass"
             );
@@ -56,7 +56,7 @@ namespace wfn_eng::vulkan::util {
 
             if (vkCreateRenderPass(Core::instance().device().logical(), &renderPassInfo, nullptr, &_renderPasses[i]) != VK_SUCCESS) {
                 throw WfnError(
-                    "wfn_eng::engine::GraphicsPipeline",
+                    "wfn_eng::engine::Pipeline",
                     "initRenderPasses",
                     "Failed to create render pass"
                 );
@@ -64,7 +64,7 @@ namespace wfn_eng::vulkan::util {
         }
     }
 
-    void GraphicsPipeline::initLayout(const GraphicsPipelineConfig& config) {
+    void Pipeline::initLayout(const PipelineConfig& config) {
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = 0; // Optional
@@ -74,14 +74,14 @@ namespace wfn_eng::vulkan::util {
 
         if (vkCreatePipelineLayout(Core::instance().device().logical(), &pipelineLayoutInfo, nullptr, &_layout) != VK_SUCCESS) {
             throw WfnError(
-                "wfn_eng::engine::GraphicsPipeline",
+                "wfn_eng::engine::Pipeline",
                 "initLayout",
                 "Failed to create layout"
             );
         }
     }
 
-    void GraphicsPipeline::initPipeline(const GraphicsPipelineConfig& config) {
+    void Pipeline::initPipeline(const PipelineConfig& config) {
         Shader vertexShader(config.vertexShaderPath);
         Shader fragmentShader(config.fragmentShaderPath);
 
@@ -195,9 +195,9 @@ namespace wfn_eng::vulkan::util {
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex = -1;
 
-        if (vkCreateGraphicsPipelines(Core::instance().device().logical(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline) != VK_SUCCESS) {
+        if (vkCreateGraphicsPipelines(Core::instance().device().logical(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_handle) != VK_SUCCESS) {
             throw WfnError(
-                "wfn_eng::engine::GraphicsPipeline",
+                "wfn_eng::engine::Pipeline",
                 "initPipeline",
                 "Failed to create pipeline"
             );
@@ -205,29 +205,29 @@ namespace wfn_eng::vulkan::util {
     }
 
     ////
-    // GraphicsPipeline(GraphicsPipelineConfig)
+    // Pipeline(PipelineConfig)
     //
-    // Constructs a GraphicsPipeline with a custom GraphicsPipelineConfig.
-    GraphicsPipeline::GraphicsPipeline(GraphicsPipelineConfig config) {
+    // Constructs a Pipeline with a custom PipelineConfig.
+    Pipeline::Pipeline(PipelineConfig config) {
         initRenderPasses(config);
         initLayout(config);
         initPipeline(config);
     }
 
     ////
-    // GraphicsPipeline()
+    // Pipeline()
     //
-    // Constructs a GraphicsPipeline with the default
-    // GraphicsPipelineConfig.
-    // GraphicsPipeline::GraphicsPipeline() :
-    //         GraphicsPipeline(...) { } // TODO: Default config?
+    // Constructs a Pipeline with the default
+    // PipelineConfig.
+    // Pipeline::Pipeline() :
+    //         Pipeline(...) { } // TODO: Default config?
 
     ////
-    // ~GraphicsPipeline()
+    // ~Pipeline()
     //
     // Destroys the VkRenderPass, VkPipelineLayout, and VkPipeline.
-    GraphicsPipeline::~GraphicsPipeline() {
-        vkDestroyPipeline(Core::instance().device().logical(), _pipeline, nullptr);
+    Pipeline::~Pipeline() {
+        vkDestroyPipeline(Core::instance().device().logical(), _handle, nullptr);
         vkDestroyPipelineLayout(Core::instance().device().logical(), _layout, nullptr);
 
         for (auto& renderPass: _renderPasses)
@@ -238,17 +238,17 @@ namespace wfn_eng::vulkan::util {
     // std::vector<VkRenderPass>& renderPasses()
     //
     // Provides reference to the render pass.
-    std::vector<VkRenderPass>& GraphicsPipeline::renderPasses() { return _renderPasses; }
+    std::vector<VkRenderPass>& Pipeline::renderPasses() { return _renderPasses; }
 
     ////
     // VkPipelineLayout& layout()
     //
     // Provides reference to the pipeline layout.
-    VkPipelineLayout& GraphicsPipeline::layout() { return _layout; }
+    VkPipelineLayout& Pipeline::layout() { return _layout; }
 
     ////
     // VkPipeline& handle()
     //
     // Provides reference to the pipeline itself.
-    VkPipeline& GraphicsPipeline::handle() { return _pipeline; }
+    VkPipeline& Pipeline::handle() { return _handle; }
 }
