@@ -14,6 +14,7 @@
 #include <set>
 
 #include "vulkan/util.hpp"
+#include "engine.hpp"
 #include "vulkan.hpp"
 #include "sdl.hpp"
 
@@ -23,6 +24,7 @@ const int HEIGHT = 480;
 #define DEBUG
 
 using namespace wfn_eng;
+using namespace wfn_eng::engine;
 using namespace wfn_eng::sdl;
 using namespace wfn_eng::vulkan;
 using namespace wfn_eng::vulkan::util;
@@ -142,9 +144,9 @@ private:
     VkPipeline graphicsPipeline;
 
     // Command buffers
-    util::Buffer *graphicsBuffer;
-    util::Buffer *indexBuffer;
-    util::Buffer *transferBuffer;
+    Buffer *graphicsBuffer;
+    Buffer *indexBuffer;
+    Buffer *transferBuffer;
     std::vector<VkCommandBuffer> graphicsCommands;
     std::vector<VkCommandBuffer> transferCommands;
 
@@ -341,24 +343,22 @@ private:
     }
 
     void createIndexBuffer() {
-        indexBuffer = new util::Buffer(
-            Core::instance().device(),
+        indexBuffer = new Buffer(
             indices.size() * sizeof(uint16_t),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VK_SHARING_MODE_CONCURRENT
         );
 
-        util::Buffer stagingBuffer(
-            Core::instance().device(),
+        Buffer stagingBuffer(
             indices.size() * sizeof(uint16_t),
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             VK_SHARING_MODE_CONCURRENT
         );
 
-        stagingBuffer.copy_from(Core::instance().device(), indices.data());
-        stagingBuffer.copy_to(Core::instance().device(), Core::instance().commandPools().transfer(), *indexBuffer);
+        stagingBuffer.copy_from(indices.data());
+        stagingBuffer.copy_to(*indexBuffer);
     }
 
     void initCommandBuffers() {
@@ -374,26 +374,23 @@ private:
         // VkPhysicalDevice physical, VkDevice device,
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-        graphicsBuffer = new util::Buffer(
-            Core::instance().device(),
+        graphicsBuffer = new Buffer(
             bufferSize,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VK_SHARING_MODE_CONCURRENT
         );
 
-        indexBuffer = new util::Buffer(
-            Core::instance().device(),
+        indexBuffer = new Buffer(
             indices.size() * sizeof(uint16_t),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VK_SHARING_MODE_CONCURRENT
         );
 
-        indexBuffer->indirect_copy_from(Core::instance().device(), Core::instance().commandPools().transfer(), indices.data());
+        indexBuffer->indirect_copy_from(indices.data());
 
-        transferBuffer = new util::Buffer(
-            Core::instance().device(),
+        transferBuffer = new Buffer(
             bufferSize,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -551,7 +548,7 @@ private:
             mv_verts[i].pos = mv_verts[i].pos + pos + glm::vec2(dx , dy);
         }
 
-        transferBuffer->copy_from(Core::instance().device(), mv_verts.data());
+        transferBuffer->copy_from(mv_verts.data());
 
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

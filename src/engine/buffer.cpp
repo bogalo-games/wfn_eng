@@ -1,4 +1,4 @@
-#include "../util.hpp"
+#include "../engine.hpp"
 
 ////
 // uint32_t findMemoryType(uint32_t, VkMemoryPropertyFlags)
@@ -15,18 +15,22 @@ static uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFil
     throw std::runtime_error("Failed to find a suitable memory type");
 }
 
-namespace wfn_eng::vulkan::util {
+using namespace wfn_eng::vulkan;
+
+namespace wfn_eng::engine {
     ////
     // struct Buffer
     //
     // Provides a wrapper around Vulkan's buffers to be more C++ like.
 
     ////
-    // Buffer(Device&, VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkSharingMode)
+    // Buffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkSharingMode)
     //
     // Constructing a buffer, given the device, the size, usage flags, property
     // flags, and sharing mode.
-    Buffer::Buffer(Device& device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, VkSharingMode sharingMode) {
+    Buffer::Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, VkSharingMode sharingMode) {
+        auto& device = Core::instance().device();
+
         this->size = size;
 
         VkBufferCreateInfo bufferInfo = {};
@@ -37,7 +41,7 @@ namespace wfn_eng::vulkan::util {
 
         if (vkCreateBuffer(device.logical(), &bufferInfo, nullptr, &handle) != VK_SUCCESS) {
             throw WfnError(
-                "wfn_eng::vulkan::util::Buffer",
+                "wfn_eng::util::Buffer",
                 "Buffer",
                 "Failed to allocate buffer"
             );
@@ -57,7 +61,7 @@ namespace wfn_eng::vulkan::util {
 
         if (vkAllocateMemory(device.logical(), &allocInfo, nullptr, &memory) != VK_SUCCESS) {
             throw WfnError(
-                "wfn_eng::vulkan::util::Buffer",
+                "wfn_eng::util::Buffer",
                 "Buffer",
                 "Failed to allocate memory"
             );
@@ -71,19 +75,19 @@ namespace wfn_eng::vulkan::util {
     //
     //
     Buffer::~Buffer() {
-        auto device = Core::instance().device().logical();
+        auto& device = Core::instance().device().logical();
         vkDestroyBuffer(device, handle, nullptr);
         vkFreeMemory(device, memory, nullptr);
     }
 
     ////
-    // void map(Device&, void **)
+    // void map(void **)
     //
     // Maps the data in this buffer (if able) to the provided memory range.
-    void Buffer::map(Device& device, void **data) {
-        if (vkMapMemory(device.logical(), memory, 0, size, 0, data) != VK_SUCCESS) {
+    void Buffer::map(void **data) {
+        if (vkMapMemory(Core::instance().device().logical(), memory, 0, size, 0, data) != VK_SUCCESS) {
             throw WfnError(
-                "wfn_eng::vulkan::util::Buffer",
+                "wfn_eng::util::Buffer",
                 "map",
                 "Failed to map memory"
             );
@@ -91,20 +95,23 @@ namespace wfn_eng::vulkan::util {
     }
 
     ////
-    // void unmap(Device&)
+    // void unmap()
     //
     // Unmaps the above mapped data.
-    void Buffer::unmap(Device& device) {
-        vkUnmapMemory(device.logical(), memory);
+    void Buffer::unmap() {
+        vkUnmapMemory(Core::instance().device().logical(), memory);
     }
 
     ////
-    // void copy_to(Device&, VkCommandPool, Buffer&, VkDeviceSize, VkDeviceSize, VkDeviceSize)
+    // void copy_to(VkCommandPool, Buffer&, VkDeviceSize, VkDeviceSize, VkDeviceSize)
     //
     // Copies the contents of this buffer to another buffer. Will halt
     // during the copy. Provides the option to specify source offset,
     // destination offset, and copy size.
-    void Buffer::copy_to(Device& device, VkCommandPool transferPool, Buffer& buffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size) {
+    void Buffer::copy_to(Buffer& buffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size) {
+        auto& transferPool = Core::instance().commandPools().transfer();
+        auto& device = Core::instance().device();
+
         VkCommandBufferAllocateInfo allocInfo = {};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -114,7 +121,7 @@ namespace wfn_eng::vulkan::util {
         VkCommandBuffer commandBuffer;
         if (vkAllocateCommandBuffers(device.logical(), &allocInfo, &commandBuffer) != VK_SUCCESS) {
             throw WfnError(
-                "wfn_eng::vulkan::util::Buffer",
+                "wfn_eng::util::Buffer",
                 "copy_to",
                 "Failed to allocate copy command buffer"
             );
@@ -126,7 +133,7 @@ namespace wfn_eng::vulkan::util {
 
         if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
             throw WfnError(
-                "wfn_eng::vulkan::util::Buffer",
+                "wfn_eng::util::Buffer",
                 "copy_to",
                 "Failed to begin command buffer"
             );
@@ -140,7 +147,7 @@ namespace wfn_eng::vulkan::util {
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             throw WfnError(
-                "wfn_eng::vulkan::util::Buffer",
+                "wfn_eng::util::Buffer",
                 "copy_to",
                 "Failed to end command buffer"
             );
@@ -153,7 +160,7 @@ namespace wfn_eng::vulkan::util {
 
         if (vkQueueSubmit(device.transferQueue(), 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
             throw WfnError(
-                "wfn_eng::vulkan::util::Buffer",
+                "wfn_eng::util::Buffer",
                 "copy_to",
                 "Failed to submit command buffer"
             );
@@ -161,7 +168,7 @@ namespace wfn_eng::vulkan::util {
 
         if (vkQueueWaitIdle(device.transferQueue()) != VK_SUCCESS) {
             throw WfnError(
-                "wfn_eng::vulkan::util::Buffer",
+                "wfn_eng::util::Buffer",
                 "copy_to",
                 "Failed to wait for queue idle"
             );
@@ -169,14 +176,12 @@ namespace wfn_eng::vulkan::util {
     }
 
     ////
-    // void copy_to(Device&, VkCommandPool, Buffer&)
+    // void copy_to(VkCommandPool, Buffer&)
     //
     // Copies the contents of this buffer to another buffer. Will halt
     // during the copy.
-    void Buffer::copy_to(Device& device, VkCommandPool transferPool, Buffer& buffer) {
+    void Buffer::copy_to(Buffer& buffer) {
         copy_to(
-            device,
-            transferPool,
             buffer,
             0,
             0,
