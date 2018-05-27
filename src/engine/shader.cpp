@@ -54,6 +54,18 @@ namespace wfn_eng::engine {
     }
 
     ////
+    // ~Shader()
+    //
+    // Destroys the VkShaderModule
+    Shader::~Shader() {
+        vkDestroyShaderModule(
+            Core::instance().device().logical(),
+            _module,
+            nullptr
+        );
+    }
+
+    ////
     // VkShaderModule& module()
     //
     // Returns the shader module of this shader.

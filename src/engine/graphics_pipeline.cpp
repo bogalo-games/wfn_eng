@@ -12,6 +12,14 @@ namespace wfn_eng::engine {
     // the information provided by a GraphicsPipelineConfig.
 
     void GraphicsPipeline::initRenderPasses(const GraphicsPipelineConfig& config) {
+        if (config.renderPassConfigs.size() == 0) {
+            throw WfnError(
+                "wfn_eng::engine::GraphicsPipeline",
+                "initRenderPasses",
+                "You must have at least one render pass"
+            );
+        }
+
         _renderPasses.resize(config.renderPassConfigs.size());
         for (int i = 0; i < config.renderPassConfigs.size(); i++) {
             VkAttachmentDescription colorAttachment = {};
@@ -100,6 +108,7 @@ namespace wfn_eng::engine {
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
+
 
         VkViewport viewport = {};
         viewport.x = 0.0f;
@@ -242,8 +251,8 @@ namespace wfn_eng::engine {
     VkPipelineLayout& GraphicsPipeline::layout() { return _layout; }
 
     ////
-    // VkPipeline& pipeline()
+    // VkPipeline& handle()
     //
     // Provides reference to the pipeline itself.
-    VkPipeline& GraphicsPipeline::pipeline() { return _pipeline; }
+    VkPipeline& GraphicsPipeline::handle() { return _pipeline; }
 }

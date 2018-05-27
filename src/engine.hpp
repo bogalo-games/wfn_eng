@@ -30,6 +30,12 @@ namespace wfn_eng::engine {
         Shader(std::string);
 
         ////
+        // ~Shader()
+        //
+        // Destroys the VkShaderModule
+        ~Shader();
+
+        ////
         // VkShaderModule& module()
         //
         // Returns the shader module of this shader.
@@ -40,6 +46,13 @@ namespace wfn_eng::engine {
         //
         // Creates a VkPipelineShaderStageCreateInfo for this shader.
         VkPipelineShaderStageCreateInfo shaderStage(VkShaderStageFlagBits);
+
+
+        // Rule of 5's
+        Shader(const Shader&) = delete;
+        Shader(Shader&&) = delete;
+        Shader& operator=(const Shader&) = delete;
+        Shader& operator=(Shader&&) = delete;
     };
 
     ////
@@ -113,10 +126,10 @@ namespace wfn_eng::engine {
         VkPipelineLayout& layout();
 
         ////
-        // VkPipeline& pipeline()
+        // VkPipeline& handle()
         //
         // Provides reference to the pipeline itself.
-        VkPipeline& pipeline();
+        VkPipeline& handle();
     };
 }
 
