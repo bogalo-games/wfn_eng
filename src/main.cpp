@@ -13,10 +13,13 @@
 #include <cmath>
 #include <set>
 
-#include "vulkan/util.hpp"
+#include "engine/util.hpp"
 #include "engine.hpp"
-#include "vulkan.hpp"
+
 #include "sdl.hpp"
+
+#include "vulkan/util.hpp"
+#include "vulkan.hpp"
 
 const int WIDTH  = 640;
 const int HEIGHT = 480;
@@ -25,6 +28,7 @@ const int HEIGHT = 480;
 
 using namespace wfn_eng;
 using namespace wfn_eng::engine;
+using namespace wfn_eng::engine::util;
 using namespace wfn_eng::sdl;
 using namespace wfn_eng::vulkan;
 using namespace wfn_eng::vulkan::util;

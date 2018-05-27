@@ -20,6 +20,9 @@ include_directories(
 )
 
 set(HEADERS
+  src/engine/util.hpp
+  src/engine.hpp
+
   src/vulkan/util.hpp
   src/vulkan.hpp
   src/error.hpp
@@ -27,7 +30,7 @@ set(HEADERS
 )
 
 set(SOURCES
-  src/engine/buffer.cpp
+  src/engine/util/buffer.cpp
 
   src/vulkan/util/queue_family_indices.cpp
   src/vulkan/util/swapchain_support.cpp

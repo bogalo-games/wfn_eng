@@ -1,6 +1,6 @@
 #include <cstdlib>
 
-namespace wfn_eng::engine {
+namespace wfn_eng::engine::util {
     ////
     // void copy_from(T)
     //
