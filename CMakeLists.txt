@@ -32,6 +32,8 @@ set(HEADERS
 set(SOURCES
   src/engine/util/buffer.cpp
 
+  src/engine/graphics_pipeline.cpp
+
   src/vulkan/util/queue_family_indices.cpp
   src/vulkan/util/swapchain_support.cpp
 
