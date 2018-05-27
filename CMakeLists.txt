@@ -5,8 +5,8 @@ set(CMAKE_CXX_FLAGS "-std=c++17 -g -Wall ${CMAKE_CXX_FLAGS}")
 
 find_package(pkgconfig REQUIRED)
 
-pkg_search_module(glm glm)
-pkg_search_module(SDL2 sdl2)
+pkg_search_module(GLM glm REQUIRED)
+pkg_search_module(SDL2 sdl2 REQUIRED)
 
 link_directories(
     "/usr/local/lib"
