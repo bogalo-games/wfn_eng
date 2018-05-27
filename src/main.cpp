@@ -13,9 +13,6 @@
 #include <cmath>
 #include <set>
 
-#include "engine/util.hpp"
-#include "engine.hpp"
-
 #include "sdl.hpp"
 
 #include "vulkan/util.hpp"
@@ -27,8 +24,6 @@ const int HEIGHT = 480;
 #define DEBUG
 
 using namespace wfn_eng;
-using namespace wfn_eng::engine;
-using namespace wfn_eng::engine::util;
 using namespace wfn_eng::sdl;
 using namespace wfn_eng::vulkan;
 using namespace wfn_eng::vulkan::util;

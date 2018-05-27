@@ -1,7 +1,5 @@
 #include "../util.hpp"
 
-#include "../../vulkan.hpp"
-
 ////
 // uint32_t findMemoryType(uint32_t, VkMemoryPropertyFlags)
 //
@@ -19,7 +17,7 @@ static uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFil
 
 using namespace wfn_eng::vulkan;
 
-namespace wfn_eng::engine::util {
+namespace wfn_eng::vulkan::util {
     ////
     // struct Buffer
     //

@@ -1,11 +1,8 @@
-#include "../engine.hpp"
+#include "../util.hpp"
 
-#include "../vulkan.hpp"
 #include <fstream>
 
-using namespace wfn_eng::vulkan;
-
-namespace wfn_eng::engine {
+namespace wfn_eng::vulkan::util {
     ////
     // class Shader
     //
