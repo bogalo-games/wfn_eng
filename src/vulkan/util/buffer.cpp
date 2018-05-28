@@ -103,6 +103,17 @@ namespace wfn_eng::vulkan::util {
     }
 
     ////
+    // void clear()
+    //
+    // Zeros out the entire buffer.
+    void Buffer::clear() {
+        void *data;
+        map(&data);
+        memset(data, 0, size);
+        unmap();
+    }
+
+    ////
     // void copy_to(VkCommandPool, Buffer&, VkDeviceSize, VkDeviceSize, VkDeviceSize)
     //
     // Copies the contents of this buffer to another buffer. Will halt

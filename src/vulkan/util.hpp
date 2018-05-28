@@ -133,6 +133,12 @@ namespace wfn_eng::vulkan::util {
         void unmap();
 
         ////
+        // void clear()
+        //
+        // Zeros out the entire buffer.
+        void clear();
+
+        ////
         // void copy_to(Buffer&, VkDeviceSize, VkDeviceSize, VkDeviceSize)
         //
         // Copies the contents of this buffer to another buffer. Will halt
