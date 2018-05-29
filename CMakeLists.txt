@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 project(wfn_eng)
 
-set(CMAKE_CXX_FLAGS "-std=c++17 -g -Wall ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-std=c++17 -g ${CMAKE_CXX_FLAGS}")
 
 find_package(pkgconfig REQUIRED)
 
@@ -27,6 +27,8 @@ set(HEADERS
 )
 
 set(SOURCES
+  src/engine/primitive_renderer.cpp
+
   src/vulkan/util/queue_family_indices.cpp
   src/vulkan/util/swapchain_support.cpp
   src/vulkan/util/pipeline.cpp
