@@ -47,10 +47,6 @@ private:
     std::vector<VkCommandBuffer> graphicsCommands;
     std::vector<VkCommandBuffer> transferCommands;
 
-    // Semaphore
-    VkSemaphore imageAvailable;
-    VkSemaphore renderFinished;
-
     // Vertex definition
     const std::vector<Vertex> vertices = {
         { { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
@@ -162,17 +158,6 @@ private:
             throw std::runtime_error("Failed to record transfer buffer");
     }
 
-    void initSemaphores() {
-        VkSemaphoreCreateInfo semaphoreInfo = {};
-        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-        if (vkCreateSemaphore(Core::instance().device().logical(), &semaphoreInfo, nullptr, &imageAvailable) != VK_SUCCESS ||
-            vkCreateSemaphore(Core::instance().device().logical(), &semaphoreInfo, nullptr, &renderFinished) != VK_SUCCESS) {
-
-            throw std::runtime_error("Failed to create semaphores");
-        }
-    }
-
     void init() {
         WindowConfig cfg {
             .vulkanPath = "vulkan/macOS/lib/libvulkan.1.dylib",
@@ -188,19 +173,12 @@ private:
         renderer = new PrimitiveRenderer(1, 1);
 
         initCommandBuffers();
-        initSemaphores();
     }
 
     ////
     // Destroying everything
-    void cleanupSemaphores() {
-        vkDestroySemaphore(Core::instance().device().logical(), imageAvailable, nullptr);
-        vkDestroySemaphore(Core::instance().device().logical(), renderFinished, nullptr);
-    }
-
     void cleanup() {
         delete renderer;
-        cleanupSemaphores();
 
         Core::destroy();
         delete window;
@@ -235,7 +213,7 @@ private:
             Core::instance().device().logical(),
             Core::instance().swapchain().get(),
             std::numeric_limits<uint64_t>::max(),
-            imageAvailable,
+            renderer->imageAvailable,
             VK_NULL_HANDLE,
             &imageIndex
         );
@@ -243,7 +221,7 @@ private:
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[] = { imageAvailable };
+        VkSemaphore waitSemaphores[] = { renderer->imageAvailable };
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
@@ -252,7 +230,7 @@ private:
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &graphicsCommands[imageIndex];
 
-        VkSemaphore signalSemaphores[] = { renderFinished };
+        VkSemaphore signalSemaphores[] = { renderer->renderFinished };
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
