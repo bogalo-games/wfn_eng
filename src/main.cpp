@@ -44,9 +44,6 @@ private:
     PrimitiveRenderer *renderer;
 
     // Command buffers
-    Buffer *graphicsBuffer;
-    Buffer *indexBuffer;
-    Buffer *transferBuffer;
     std::vector<VkCommandBuffer> graphicsCommands;
     std::vector<VkCommandBuffer> transferCommands;
 
@@ -81,28 +78,7 @@ private:
         // VkPhysicalDevice physical, VkDevice device,
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-        graphicsBuffer = new Buffer(
-            bufferSize,
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            VK_SHARING_MODE_CONCURRENT
-        );
-
-        indexBuffer = new Buffer(
-            indices.size() * sizeof(uint16_t),
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            VK_SHARING_MODE_CONCURRENT
-        );
-
-        indexBuffer->indirect_copy_from(indices.data());
-
-        transferBuffer = new Buffer(
-            bufferSize,
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            VK_SHARING_MODE_CONCURRENT
-        );
+        renderer->indexBuffer->indirect_copy_from(indices.data());
 
         //
         // Creating the draw commands
@@ -139,11 +115,11 @@ private:
             vkCmdBeginRenderPass(graphicsCommands[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
             vkCmdBindPipeline(graphicsCommands[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline->handle());
 
-            VkBuffer graphicsBuffers[] = { graphicsBuffer->handle };
+            VkBuffer graphicsBuffers[] = { renderer->quadBuffer->handle };
             VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(graphicsCommands[i], 0, 1, graphicsBuffers, offsets);
 
-            vkCmdBindIndexBuffer(graphicsCommands[i], indexBuffer->handle, 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindIndexBuffer(graphicsCommands[i], renderer->indexBuffer->handle, 0, VK_INDEX_TYPE_UINT16);
 
             vkCmdDrawIndexed(
                 graphicsCommands[i],
@@ -180,7 +156,7 @@ private:
         copyRegion.srcOffset = 0;
         copyRegion.dstOffset = 0;
         copyRegion.size = bufferSize;
-        vkCmdCopyBuffer(transferCommands[0], transferBuffer->handle, graphicsBuffer->handle, 1, &copyRegion);
+        vkCmdCopyBuffer(transferCommands[0], renderer->quadTransferBuffer->handle, renderer->quadBuffer->handle, 1, &copyRegion);
 
         if (vkEndCommandBuffer(transferCommands[0]) != VK_SUCCESS)
             throw std::runtime_error("Failed to record transfer buffer");
@@ -209,7 +185,7 @@ private:
         window = new Window(cfg);
         Core::initialize(*window);
 
-        renderer = new PrimitiveRenderer(8, 8);
+        renderer = new PrimitiveRenderer(1, 1);
 
         initCommandBuffers();
         initSemaphores();
@@ -217,12 +193,6 @@ private:
 
     ////
     // Destroying everything
-    void cleanupCommandBuffers() {
-        delete graphicsBuffer;
-        delete indexBuffer;
-        delete transferBuffer;
-    }
-
     void cleanupSemaphores() {
         vkDestroySemaphore(Core::instance().device().logical(), imageAvailable, nullptr);
         vkDestroySemaphore(Core::instance().device().logical(), renderFinished, nullptr);
@@ -230,7 +200,6 @@ private:
 
     void cleanup() {
         delete renderer;
-        cleanupCommandBuffers();
         cleanupSemaphores();
 
         Core::destroy();
@@ -250,7 +219,7 @@ private:
             mv_verts[i].pos = mv_verts[i].pos + pos + glm::vec2(dx , dy);
         }
 
-        transferBuffer->copy_from(mv_verts.data());
+        renderer->quadTransferBuffer->copy_from(mv_verts.data());
 
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
