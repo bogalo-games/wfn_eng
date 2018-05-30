@@ -41,8 +41,7 @@ class HelloTriangleApplication {
 private:
     Window *window;
 
-    // Graphics pipeline
-    Pipeline *pipeline;
+    PrimitiveRenderer *renderer;
 
     // Command buffers
     Buffer *graphicsBuffer;
@@ -128,7 +127,7 @@ private:
 
             VkRenderPassBeginInfo renderPassInfo = {};
             renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass = pipeline->renderPasses()[0];
+            renderPassInfo.renderPass = renderer->pipeline->renderPasses()[0];
             renderPassInfo.framebuffer = Core::instance().swapchain().frameBuffers()[i];
             renderPassInfo.renderArea.offset = { 0, 0 };
             renderPassInfo.renderArea.extent = Core::instance().swapchain().extent();
@@ -138,7 +137,7 @@ private:
             renderPassInfo.pClearValues = &clearColor;
 
             vkCmdBeginRenderPass(graphicsCommands[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-            vkCmdBindPipeline(graphicsCommands[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->handle());
+            vkCmdBindPipeline(graphicsCommands[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline->handle());
 
             VkBuffer graphicsBuffers[] = { graphicsBuffer->handle };
             VkDeviceSize offsets[] = { 0 };
@@ -210,21 +209,7 @@ private:
         window = new Window(cfg);
         Core::initialize(*window);
 
-        auto ad = Vertex::getAttributeDescriptions();
-        PipelineConfig pipelineConfig {
-            .vertexShaderPath = vertPath,
-            .fragmentShaderPath = fragPath,
-
-            .renderPassConfigs = std::vector<RenderPassConfig> { RenderPassConfig() },
-
-            .vertexBindings = std::vector<VkVertexInputBindingDescription> {
-                Vertex::getBindingDescription()
-            },
-
-            .attributeDescriptions = std::vector<VkVertexInputAttributeDescription>(ad.begin(), ad.end())
-        };
-
-        pipeline = new Pipeline(pipelineConfig);
+        renderer = new PrimitiveRenderer(8, 8);
 
         initCommandBuffers();
         initSemaphores();
@@ -244,7 +229,7 @@ private:
     }
 
     void cleanup() {
-        delete pipeline;
+        delete renderer;
         cleanupCommandBuffers();
         cleanupSemaphores();
 

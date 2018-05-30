@@ -59,7 +59,7 @@ namespace wfn_eng::engine {
         QUAD
     };
 
-    class PrimitiveRenderer {
+    struct PrimitiveRenderer {
         Pipeline *pipeline;
 
         Buffer *triangleBuffer;
@@ -92,7 +92,6 @@ namespace wfn_eng::engine {
 
         void clear();
 
-    public:
         PrimitiveRenderer(size_t, size_t);
 
         ~PrimitiveRenderer();
