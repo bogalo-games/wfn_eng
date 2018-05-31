@@ -136,7 +136,7 @@ namespace wfn_eng::engine {
 
             vkCmdDraw(
                 renderCommands[i],
-                3 * triangleCount,
+                3 * maxTriangles,
                 1,
                 0,
                 0
@@ -150,7 +150,7 @@ namespace wfn_eng::engine {
 
             vkCmdDrawIndexed(
                 renderCommands[i],
-                6 * quadCount,
+                6 * maxQuads,
                 1,
                 0,
                 0,

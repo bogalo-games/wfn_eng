@@ -44,7 +44,6 @@ private:
     PrimitiveRenderer *renderer;
 
     // Command buffers
-    std::vector<VkCommandBuffer> graphicsCommands;
     std::vector<VkCommandBuffer> transferCommands;
 
     // Vertex definition
@@ -65,72 +64,14 @@ private:
         //
         // Creating the command pool
         //
-        graphicsCommands.resize(Core::instance().swapchain().frameBuffers().size());
+        size_t bufferSize = sizeof(vertices[0]) * vertices.size();
         transferCommands.resize(1); // TODO: Change this later?
 
         //
         // Creating the vertex buffers
         //
         // VkPhysicalDevice physical, VkDevice device,
-        VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-
         renderer->indexBuffer->indirect_copy_from(indices.data());
-
-        //
-        // Creating the draw commands
-        //
-        VkCommandBufferAllocateInfo allocateInfo = {};
-        allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocateInfo.commandPool = Core::instance().commandPools().graphics();
-        allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocateInfo.commandBufferCount = (uint32_t)graphicsCommands.size();
-
-        if (vkAllocateCommandBuffers(Core::instance().device().logical(), &allocateInfo, graphicsCommands.data()))
-            throw std::runtime_error("Failed to allocate command buffers");
-
-        for (size_t i = 0; i < graphicsCommands.size(); i++) {
-            VkCommandBufferBeginInfo beginInfo = {};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-            beginInfo.pInheritanceInfo = VK_NULL_HANDLE;
-
-            if (vkBeginCommandBuffer(graphicsCommands[i], &beginInfo) != VK_SUCCESS)
-                throw std::runtime_error("Failed to begin recording command buffer");
-
-            VkRenderPassBeginInfo renderPassInfo = {};
-            renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass = renderer->pipeline->renderPasses()[0];
-            renderPassInfo.framebuffer = Core::instance().swapchain().frameBuffers()[i];
-            renderPassInfo.renderArea.offset = { 0, 0 };
-            renderPassInfo.renderArea.extent = Core::instance().swapchain().extent();
-
-            VkClearValue clearColor = { 0.3f, 0.3f, 0.3f, 1.0f };
-            renderPassInfo.clearValueCount = 1;
-            renderPassInfo.pClearValues = &clearColor;
-
-            vkCmdBeginRenderPass(graphicsCommands[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-            vkCmdBindPipeline(graphicsCommands[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline->handle());
-
-            VkBuffer graphicsBuffers[] = { renderer->quadBuffer->handle };
-            VkDeviceSize offsets[] = { 0 };
-            vkCmdBindVertexBuffers(graphicsCommands[i], 0, 1, graphicsBuffers, offsets);
-
-            vkCmdBindIndexBuffer(graphicsCommands[i], renderer->indexBuffer->handle, 0, VK_INDEX_TYPE_UINT16);
-
-            vkCmdDrawIndexed(
-                graphicsCommands[i],
-                static_cast<uint32_t>(indices.size()),
-                1,
-                0,
-                0,
-                0
-            );
-
-            vkCmdEndRenderPass(graphicsCommands[i]);
-
-            if (vkEndCommandBuffer(graphicsCommands[i]) != VK_SUCCESS)
-                throw std::runtime_error("Failed to record command buffer");
-        }
 
         //
         // Creating the transfer command
@@ -228,7 +169,7 @@ private:
         submitInfo.pWaitDstStageMask = waitStages;
 
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &graphicsCommands[imageIndex];
+        submitInfo.pCommandBuffers = &renderer->renderCommands[imageIndex];
 
         VkSemaphore signalSemaphores[] = { renderer->renderFinished };
         submitInfo.signalSemaphoreCount = 1;
