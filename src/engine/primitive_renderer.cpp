@@ -211,15 +211,15 @@ namespace wfn_eng::engine {
             .size = maxQuads * quadSize()
         };
 
-        // VkBufferCopy copyIndices = {
-        //     .srcOffset = 0,
-        //     .dstOffset = 0,
-        //     .size = maxQuads * indexSize()
-        // };
+        VkBufferCopy copyIndices = {
+            .srcOffset = 0,
+            .dstOffset = 0,
+            .size = maxQuads * indexSize()
+        };
 
         vkCmdCopyBuffer(transferCommand, triangleTransferBuffer->handle, triangleBuffer->handle, 1, &copyTriangles);
         vkCmdCopyBuffer(transferCommand, quadTransferBuffer->handle, quadBuffer->handle, 1, &copyQuads);
-        // vkCmdCopyBuffer(transferCommand, indexTransferBuffer->handle, indexBuffer->handle, 1, &copyIndices);
+        vkCmdCopyBuffer(transferCommand, indexTransferBuffer->handle, indexBuffer->handle, 1, &copyIndices);
 
         if (vkEndCommandBuffer(transferCommand) != VK_SUCCESS) {
             throw WfnError(
@@ -243,6 +243,20 @@ namespace wfn_eng::engine {
             );
         }
 
+        // Constructing the fence
+        VkFenceCreateInfo fenceInfo = {};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.pNext = nullptr;
+        fenceInfo.flags = 0;
+
+        if (vkCreateFence(core.device().logical(), &fenceInfo, nullptr, &transferFinished) != VK_SUCCESS) {
+            throw WfnError(
+                "wfn_eng::engine::PrimitiveRenderer",
+                "PrimitiveRenderer",
+                "Failed to create fence"
+            );
+        }
+
         // Initializing book-keeping
         this->maxTriangles = maxTriangles;
         this->maxQuads = maxQuads;
@@ -254,6 +268,8 @@ namespace wfn_eng::engine {
     PrimitiveRenderer::~PrimitiveRenderer() {
         // NOTE: graphics and transfer buffers get deleted when their command
         //       pool (constructed via Core) gets deleted.
+
+        vkDestroyFence(Core::instance().device().logical(), transferFinished, nullptr);
 
         vkDestroySemaphore(Core::instance().device().logical(), imageAvailable, nullptr);
         vkDestroySemaphore(Core::instance().device().logical(), renderFinished, nullptr);
@@ -304,6 +320,7 @@ namespace wfn_eng::engine {
 
         indexTransferBuffer->map(&data);
         memcpy((uint16_t *)data + 6 * quadCount, indices.data(), indexSize());
+        indexTransferBuffer->unmap();
 
         quadCount += 1;
     }
@@ -360,13 +377,25 @@ namespace wfn_eng::engine {
         transferSubmitInfo.commandBufferCount = 1;
         transferSubmitInfo.pCommandBuffers = &transferCommand;
 
-        if (vkQueueSubmit(core.device().transferQueue(), 1, &transferSubmitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+        if (vkQueueSubmit(core.device().transferQueue(), 1, &transferSubmitInfo, transferFinished) != VK_SUCCESS) {
             throw WfnError(
                 "wfn_eng::engine::PrimitiveRenderer",
                 "render",
                 "Failed to submit transfer command"
             );
         }
+
+        // NOTE: Ensuring that the data is transferred over prior to beginning
+        //       the render.
+        vkWaitForFences(
+            core.device().logical(),
+            1,
+            &transferFinished,
+            VK_TRUE,
+            std::numeric_limits<uint64_t>::max()
+        );
+
+        vkResetFences(core.device().logical(), 1, &transferFinished);
 
         // Performing the render
         uint32_t imageIndex;

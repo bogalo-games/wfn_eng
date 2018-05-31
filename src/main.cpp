@@ -101,66 +101,24 @@ private:
     void updatePosition(const glm::vec2& pos, uint32_t ticks) {
         float t = ticks / 1000.0f;
 
-        std::vector<Vertex> mv_verts(vertices);
+        std::array<Vertex, 4> mv_verts;
         for (int i = 0; i < mv_verts.size(); i++) {
             float dx = cos(t * (1 + i)) / 8;
             float dy = cos(t * 2 * (1 + i)) / 8;
 
+            mv_verts[i] = vertices[i];
             mv_verts[i].pos = mv_verts[i].pos + pos + glm::vec2(dx , dy);
         }
 
-        renderer->quadTransferBuffer->copy_from(mv_verts.data());
+        renderer->drawQuad(mv_verts);
 
-        VkSubmitInfo submitInfo = {};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &renderer->transferCommand;
+        std::array<Vertex, 3> triPoints = {
+          Vertex { { -1.0f, -1.0f }, { 1.0f, 0.0f, 0.0f } },
+          Vertex { {  1.0f, -1.0f }, { 0.0f, 1.0f, 0.0f } },
+          Vertex { {  0.0f,  1.0f }, { 0.0f, 0.0f, 1.0f } }
+        };
 
-        vkQueueSubmit(Core::instance().device().transferQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-    }
-
-    void drawFrame() {
-        uint32_t imageIndex;
-        vkAcquireNextImageKHR(
-            Core::instance().device().logical(),
-            Core::instance().swapchain().get(),
-            std::numeric_limits<uint64_t>::max(),
-            renderer->imageAvailable,
-            VK_NULL_HANDLE,
-            &imageIndex
-        );
-
-        VkSubmitInfo submitInfo = {};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-        VkSemaphore waitSemaphores[] = { renderer->imageAvailable };
-        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = waitSemaphores;
-        submitInfo.pWaitDstStageMask = waitStages;
-
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &renderer->renderCommands[imageIndex];
-
-        VkSemaphore signalSemaphores[] = { renderer->renderFinished };
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalSemaphores;
-
-        if (vkQueueSubmit(Core::instance().device().graphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
-            throw std::runtime_error("Failed to submit queue");
-
-        VkPresentInfoKHR presentInfo = {};
-        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
-
-        VkSwapchainKHR swapchains[] = { Core::instance().swapchain().get() };
-        presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = swapchains;
-        presentInfo.pImageIndices = &imageIndex;
-        presentInfo.pResults = nullptr;
-
-        vkQueuePresentKHR(Core::instance().device().presentationQueue(), &presentInfo);
+        renderer->drawTriangle(triPoints);
     }
 
     void mainLoop() {
@@ -204,7 +162,7 @@ private:
                 break;
 
             updatePosition(pos, curr);
-            drawFrame();
+            renderer->render();
             last = curr;
 
             SDL_Delay(16);

@@ -77,6 +77,8 @@ namespace wfn_eng::engine {
         VkSemaphore imageAvailable;
         VkSemaphore renderFinished;
 
+        VkFence transferFinished;
+
         uint32_t maxTriangles;
         uint32_t maxQuads;
 
