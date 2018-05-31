@@ -85,6 +85,7 @@ namespace wfn_eng::engine {
 
         uint32_t triangleSize();
         uint32_t quadSize();
+        uint32_t indexSize();
 
         uint32_t triangleOffset();
         uint32_t quadOffset();

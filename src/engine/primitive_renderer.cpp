@@ -5,10 +5,11 @@ using namespace wfn_eng::vulkan;
 namespace wfn_eng::engine {
     uint32_t PrimitiveRenderer::triangleSize() { return sizeof(Vertex) * 3; }
     uint32_t PrimitiveRenderer::quadSize() { return sizeof(Vertex) * 4; }
+    uint32_t PrimitiveRenderer::indexSize() { return sizeof(uint16_t) * 6; }
 
     uint32_t PrimitiveRenderer::triangleOffset() { return triangleCount * triangleSize(); }
     uint32_t PrimitiveRenderer::quadOffset() { return quadCount * quadSize(); }
-    uint32_t PrimitiveRenderer::indexOffset() { return quadCount * sizeof(uint16_t); }
+    uint32_t PrimitiveRenderer::indexOffset() { return quadCount * indexSize(); }
 
     void PrimitiveRenderer::clear() {
         triangleTransferBuffer->clear();
@@ -55,7 +56,7 @@ namespace wfn_eng::engine {
         );
 
         indexBuffer = new Buffer(
-            maxQuads * 6 * sizeof(uint16_t),
+            maxQuads * indexSize(),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VK_SHARING_MODE_CONCURRENT
@@ -77,7 +78,7 @@ namespace wfn_eng::engine {
         );
 
         indexTransferBuffer = new Buffer(
-            maxQuads * 6 * sizeof(uint16_t),
+            maxQuads * indexSize(),
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             VK_SHARING_MODE_CONCURRENT
@@ -213,7 +214,7 @@ namespace wfn_eng::engine {
         VkBufferCopy copyIndices = {
             .srcOffset = 0,
             .dstOffset = 0,
-            .size = maxQuads * 6 * sizeof(uint16_t)
+            .size = maxQuads * indexSize()
         };
 
         vkCmdCopyBuffer(transferCommand, triangleTransferBuffer->handle, triangleBuffer->handle, 1, &copyTriangles);
@@ -294,7 +295,7 @@ namespace wfn_eng::engine {
 
         void *data;
         quadTransferBuffer->map(&data);
-        memcpy((Vertex *)data + 4 * quadCount, vert.data(), sizeof(Vertex) * 4);
+        memcpy((Vertex *)data + 4 * quadCount, vert.data(), quadSize());
         quadTransferBuffer->unmap();
 
         std::array<uint16_t, 6> indices { 0, 1, 2, 2, 3, 0 };
@@ -302,7 +303,7 @@ namespace wfn_eng::engine {
             index += 4 * quadCount;
 
         indexTransferBuffer->map(&data);
-        memcpy((uint16_t *)data + 6 * quadCount, indices.data(), sizeof(uint16_t) * 6);
+        memcpy((uint16_t *)data + 6 * quadCount, indices.data(), indexSize());
 
         quadCount += 1;
     }
