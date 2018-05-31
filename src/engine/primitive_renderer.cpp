@@ -202,24 +202,24 @@ namespace wfn_eng::engine {
         VkBufferCopy copyTriangles = {
             .srcOffset = 0,
             .dstOffset = 0,
-            .size = maxTriangles * 3 * sizeof(Vertex)
+            .size = maxTriangles * triangleSize()
         };
 
         VkBufferCopy copyQuads = {
             .srcOffset = 0,
             .dstOffset = 0,
-            .size = maxQuads * 4 * sizeof(Vertex)
+            .size = maxQuads * quadSize()
         };
 
-        VkBufferCopy copyIndices = {
-            .srcOffset = 0,
-            .dstOffset = 0,
-            .size = maxQuads * indexSize()
-        };
+        // VkBufferCopy copyIndices = {
+        //     .srcOffset = 0,
+        //     .dstOffset = 0,
+        //     .size = maxQuads * indexSize()
+        // };
 
         vkCmdCopyBuffer(transferCommand, triangleTransferBuffer->handle, triangleBuffer->handle, 1, &copyTriangles);
         vkCmdCopyBuffer(transferCommand, quadTransferBuffer->handle, quadBuffer->handle, 1, &copyQuads);
-        vkCmdCopyBuffer(transferCommand, indexTransferBuffer->handle, indexBuffer->handle, 1, &copyIndices);
+        // vkCmdCopyBuffer(transferCommand, indexTransferBuffer->handle, indexBuffer->handle, 1, &copyIndices);
 
         if (vkEndCommandBuffer(transferCommand) != VK_SUCCESS) {
             throw WfnError(

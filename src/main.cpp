@@ -43,9 +43,6 @@ private:
 
     PrimitiveRenderer *renderer;
 
-    // Command buffers
-    std::vector<VkCommandBuffer> transferCommands;
-
     // Vertex definition
     const std::vector<Vertex> vertices = {
         { { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
@@ -65,38 +62,12 @@ private:
         // Creating the command pool
         //
         size_t bufferSize = sizeof(vertices[0]) * vertices.size();
-        transferCommands.resize(1); // TODO: Change this later?
 
         //
         // Creating the vertex buffers
         //
         // VkPhysicalDevice physical, VkDevice device,
         renderer->indexBuffer->indirect_copy_from(indices.data());
-
-        //
-        // Creating the transfer command
-        //
-        VkCommandBufferAllocateInfo transferInfo = {};
-        transferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        transferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        transferInfo.commandPool = Core::instance().commandPools().transfer();
-        transferInfo.commandBufferCount = 1;
-
-        vkAllocateCommandBuffers(Core::instance().device().logical(), &transferInfo, transferCommands.data());
-
-        VkCommandBufferBeginInfo beginInfo = {};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-        vkBeginCommandBuffer(transferCommands[0], &beginInfo);
-
-        VkBufferCopy copyRegion = {};
-        copyRegion.srcOffset = 0;
-        copyRegion.dstOffset = 0;
-        copyRegion.size = bufferSize;
-        vkCmdCopyBuffer(transferCommands[0], renderer->quadTransferBuffer->handle, renderer->quadBuffer->handle, 1, &copyRegion);
-
-        if (vkEndCommandBuffer(transferCommands[0]) != VK_SUCCESS)
-            throw std::runtime_error("Failed to record transfer buffer");
     }
 
     void init() {
@@ -143,7 +114,7 @@ private:
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = transferCommands.data();
+        submitInfo.pCommandBuffers = &renderer->transferCommand;
 
         vkQueueSubmit(Core::instance().device().transferQueue(), 1, &submitInfo, VK_NULL_HANDLE);
     }
