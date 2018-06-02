@@ -6,3 +6,4 @@ wfn_eng
 vulkan/
 *.spv
 !src/vulkan
+compile_commands.json

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 project(wfn_eng)
 
 set(CMAKE_CXX_FLAGS "-std=c++17 -g ${CMAKE_CXX_FLAGS}")
+set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
 find_package(pkgconfig REQUIRED)
 
