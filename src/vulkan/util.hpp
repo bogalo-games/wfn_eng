@@ -84,6 +84,68 @@ namespace wfn_eng::vulkan::util {
     };
 
     ////
+    // struct Image
+    //
+    // A wrapper around Vulkan's VkImage to handle creation and destruction.
+    struct Image {
+        ////
+        // uint32_t width
+        //
+        // The width, in pixels, of the image
+        uint32_t width;
+
+        ////
+        // uint32_t height
+        //
+        // The height, in pixels, of the image.
+        uint32_t height;
+
+        ////
+        // VkImage handle
+        //
+        // The handle to the Vulkan implementation of an image.
+        VkImage handle;
+
+        ////
+        // VkDeviceMemory memory
+        //
+        // The device memory mapped to the image.
+        VkDeviceMemory memory;
+
+        ////
+        // VkImageLayout layout
+        //
+        // The layout of the image. Don't modify this without using
+        // transitionLayout please.
+        VkImageLayout layout;
+
+        ////
+        // Image(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags)
+        //
+        // Constructs a new Image from the provided information.
+        Image(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkSharingMode);
+
+        ////
+        // ~Image()
+        //
+        // Destroys the image and its contents.
+        ~Image();
+
+        ////
+        // void transitionLayout(VkImageLayout)
+        //
+        // Moves from the current layout to another layout.
+        void transitionLayout(VkImageLayout);
+
+
+        // Rule of 5's.
+        Image(const Image&) = delete;
+        Image(Image&&) = delete;
+        Image& operator=(const Image&) = delete;
+        Image& operator=(Image&&) = delete;
+    };
+
+    ////
     // struct Buffer
     //
     // Provides a wrapper around Vulkan's buffers to be more C++ like.
@@ -154,6 +216,21 @@ namespace wfn_eng::vulkan::util {
         void copy_to(Buffer&);
 
         ////
+        // void copy_to(Image&, VkDeviceSize, VkDeviceSize, VkDeviceSize)
+        //
+        // Copies the contents of this buffer to an image. Will halt during the
+        // copy. Provides the option to specify source offset, destination
+        // offset, and copy size.
+        void copy_to(Image&, VkDeviceSize, VkOffset3D, VkDeviceSize);
+
+        ////
+        // void copy_to(Image&)
+        //
+        // Copies the contents of this buffer to n image. Will halt during the
+        // copy.
+        void copy_to(Image&);
+
+        ////
         // void copy_from(T)
         //
         // Copies the contents of the provided type into the buffer. Will fail
@@ -175,68 +252,6 @@ namespace wfn_eng::vulkan::util {
         Buffer(Buffer&&) = delete;
         Buffer& operator=(const Buffer&) = delete;
         Buffer& operator=(Buffer&&) = delete;
-    };
-
-    ////
-    // struct Image
-    //
-    // A wrapper around Vulkan's VkImage to handle creation and destruction.
-    struct Image {
-        ////
-        // uint32_t width
-        //
-        // The width, in pixels, of the image
-        uint32_t width;
-
-        ////
-        // uint32_t height
-        //
-        // The height, in pixels, of the image.
-        uint32_t height;
-
-        ////
-        // VkImage handle
-        //
-        // The handle to the Vulkan implementation of an image.
-        VkImage handle;
-
-        ////
-        // VkDeviceMemory memory
-        //
-        // The device memory mapped to the image.
-        VkDeviceMemory memory;
-
-        ////
-        // VkImageLayout layout
-        //
-        // The layout of the image. Don't modify this without using
-        // transitionLayout please.
-        VkImageLayout layout;
-
-        ////
-        // Image(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags)
-        //
-        // Constructs a new Image from the provided information.
-        Image(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkSharingMode);
-
-        ////
-        // ~Image()
-        //
-        // Destroys the image and its contents.
-        ~Image();
-
-        ////
-        // void transitionLayout(VkImageLayout)
-        //
-        // Moves from the current layout to another layout.
-        void transitionLayout(VkImageLayout);
-
-
-        // Rule of 5's.
-        Image(const Image&) = delete;
-        Image(Image&&) = delete;
-        Image& operator=(const Image&) = delete;
-        Image& operator=(Image&&) = delete;
     };
 
     ////
