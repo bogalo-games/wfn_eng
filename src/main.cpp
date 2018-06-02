@@ -55,21 +55,6 @@ private:
         0, 1, 2, 2, 3, 0
     };
 
-    ////
-    // Initializing Vulkan components
-    void initCommandBuffers() {
-        //
-        // Creating the command pool
-        //
-        size_t bufferSize = sizeof(vertices[0]) * vertices.size();
-
-        //
-        // Creating the vertex buffers
-        //
-        // VkPhysicalDevice physical, VkDevice device,
-        renderer->indexBuffer->indirect_copy_from(indices.data());
-    }
-
     void init() {
         WindowConfig cfg {
             .vulkanPath = "vulkan/macOS/lib/libvulkan.1.dylib",
@@ -83,8 +68,6 @@ private:
         Core::initialize(*window);
 
         renderer = new PrimitiveRenderer(1, 1);
-
-        initCommandBuffers();
     }
 
     ////
