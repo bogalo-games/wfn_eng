@@ -33,6 +33,7 @@ set(SOURCES
   src/vulkan/util/queue_family_indices.cpp
   src/vulkan/util/swapchain_support.cpp
   src/vulkan/util/pipeline.cpp
+  src/vulkan/util/texture.cpp
   src/vulkan/util/buffer.cpp
   src/vulkan/util/shader.cpp
   src/vulkan/util/image.cpp

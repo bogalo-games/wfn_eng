@@ -381,6 +381,59 @@ namespace wfn_eng::vulkan::util {
     };
 
     ////
+    // class Texture
+    //
+    // A class built on top of the Buffer and Image structs to provide texture
+    // sampling to fragment shaders.
+    class Texture {
+        Image *_image;
+        VkImageView _imageView;
+        VkSampler _sampler;
+
+        void createImage(std::string);
+        void createImageView();
+        void createSampler();
+
+    public:
+        ////
+        // Texture(std::string)
+        //
+        // Builds a texture from a path on disk.
+        Texture(std::string);
+
+        ////
+        // ~Texture()
+        //
+        //
+        ~Texture();
+
+        ////
+        // Image& image
+        //
+        // Provides a reference to the internal image.
+        Image& image();
+
+        ////
+        // VkImageView& imageView()
+        //
+        // Provides a reference to the VkImageView.
+        VkImageView& imageView();
+
+        ////
+        // VkSampler& sampler();
+        //
+        // Provides a reference to the VkSampler.
+        VkSampler& sampler();
+
+
+        // Rule of 5's.
+        Texture(const Texture&) = delete;
+        Texture(Texture&&) = delete;
+        Texture& operator=(const Texture&) = delete;
+        Texture& operator=(Texture&&) = delete;
+    };
+
+    ////
     // uint32_t findMemoryType(uint32_t, VkMemoryPropertyFlags)
     //
     // Chooses a type of memory given a type filter and

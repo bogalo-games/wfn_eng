@@ -16,6 +16,8 @@
 #include <cmath>
 #include <set>
 
+#include "stb_image.h"
+
 #include "engine.hpp"
 #include "sdl.hpp"
 #include "vulkan/util.hpp"
