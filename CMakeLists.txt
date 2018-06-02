@@ -35,6 +35,8 @@ set(SOURCES
   src/vulkan/util/pipeline.cpp
   src/vulkan/util/buffer.cpp
   src/vulkan/util/shader.cpp
+  src/vulkan/util/image.cpp
+  src/vulkan/util/util.cpp
 
   src/vulkan/command_pools.cpp
   src/vulkan/swapchain.cpp

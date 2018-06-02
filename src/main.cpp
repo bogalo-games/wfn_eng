@@ -1,3 +1,6 @@
+#define STB_IMAGE_IMPLEMENTATION
+#define DEBUG
+
 #include <vulkan/vulkan.h>
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -20,8 +23,6 @@
 
 const int WIDTH  = 640;
 const int HEIGHT = 480;
-
-#define DEBUG
 
 using namespace wfn_eng;
 using namespace wfn_eng::engine;

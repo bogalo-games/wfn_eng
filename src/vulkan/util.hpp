@@ -178,6 +178,68 @@ namespace wfn_eng::vulkan::util {
     };
 
     ////
+    // struct Image
+    //
+    // A wrapper around Vulkan's VkImage to handle creation and destruction.
+    struct Image {
+        ////
+        // uint32_t width
+        //
+        // The width, in pixels, of the image
+        uint32_t width;
+
+        ////
+        // uint32_t height
+        //
+        // The height, in pixels, of the image.
+        uint32_t height;
+
+        ////
+        // VkImage handle
+        //
+        // The handle to the Vulkan implementation of an image.
+        VkImage handle;
+
+        ////
+        // VkDeviceMemory memory
+        //
+        // The device memory mapped to the image.
+        VkDeviceMemory memory;
+
+        ////
+        // VkImageLayout layout
+        //
+        // The layout of the image. Don't modify this without using
+        // transitionLayout please.
+        VkImageLayout layout;
+
+        ////
+        // Image(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags)
+        //
+        // Constructs a new Image from the provided information.
+        Image(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkSharingMode);
+
+        ////
+        // ~Image()
+        //
+        // Destroys the image and its contents.
+        ~Image();
+
+        ////
+        // void transitionLayout(VkImageLayout)
+        //
+        // Moves from the current layout to another layout.
+        void transitionLayout(VkImageLayout);
+
+
+        // Rule of 5's.
+        Image(const Image&) = delete;
+        Image(Image&&) = delete;
+        Image& operator=(const Image&) = delete;
+        Image& operator=(Image&&) = delete;
+    };
+
+    ////
     // class Shader
     //
     // Provides a wrapper around the VkShaderModule class to handle construction
@@ -302,6 +364,13 @@ namespace wfn_eng::vulkan::util {
         // Provides reference to the pipeline itself.
         VkPipeline& handle();
     };
+
+    ////
+    // uint32_t findMemoryType(uint32_t, VkMemoryPropertyFlags)
+    //
+    // Chooses a type of memory given a type filter and
+    // VkMemoryPropertyFlags.
+    uint32_t findMemoryType(uint32_t, VkMemoryPropertyFlags);
 }
 
 #include "util/buffer.tpp"
