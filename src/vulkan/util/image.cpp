@@ -15,7 +15,10 @@ namespace wfn_eng::vulkan::util {
                  VkMemoryPropertyFlags memoryProps, VkSharingMode sharing) {
         auto& device = Core::instance().device().logical();
 
+        this->width = width;
+        this->height = height;
         this->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
         VkImageCreateInfo createInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = VK_IMAGE_TYPE_2D,
