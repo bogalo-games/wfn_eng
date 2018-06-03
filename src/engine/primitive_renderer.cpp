@@ -23,7 +23,7 @@ namespace wfn_eng::engine {
     PrimitiveRenderer::PrimitiveRenderer(size_t maxTriangles, size_t maxQuads) {
         auto& core = Core::instance();
 
-        texture = new Texture("src/textures/texture.jpg");
+        texture = new Texture("src/textures/person.png");
 
         // Creating the VkDescriptorPoolSize
         std::vector<VkDescriptorPoolSize> descriptorPoolSizes {
