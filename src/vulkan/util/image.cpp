@@ -7,10 +7,10 @@ namespace wfn_eng::vulkan::util {
     // A wrapper around Vulkan's VkImage to handle creation and destruction.
 
     ////
-    // Image(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags)
+    // Image(uint32_t, uint32_t, int, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags)
     //
     // Constructs a new Image from the provided information.
-    Image::Image(uint32_t width, uint32_t height, VkFormat format,
+    Image::Image(uint32_t width, uint32_t height, int channels,
                  VkImageTiling tiling, VkImageUsageFlags usage,
                  VkMemoryPropertyFlags memoryProps, VkSharingMode sharing) {
         auto& device = Core::instance().device().logical();
@@ -18,6 +18,16 @@ namespace wfn_eng::vulkan::util {
         this->width = width;
         this->height = height;
         this->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+        this->channels = channels;
+        if (channels == 4)
+            format = VK_FORMAT_R8G8B8A8_UNORM;
+        else {
+            throw WfnError(
+                "wfn_eng::vulkan::util::Image",
+                "Image",
+                "Unsupported channel count."
+            );
+        }
 
         VkImageCreateInfo createInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,

@@ -120,10 +120,22 @@ namespace wfn_eng::vulkan::util {
         VkImageLayout layout;
 
         ////
+        // int channels
+        //
+        // The number of channels in the image.
+        int channels;
+
+        ////
+        // VkFormat format
+        //
+        // The format of the image, as decided per the number of channels.
+        VkFormat format;
+
+        ////
         // Image(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags)
         //
         // Constructs a new Image from the provided information.
-        Image(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkSharingMode);
+        Image(uint32_t, uint32_t, int, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkSharingMode);
 
         ////
         // ~Image()

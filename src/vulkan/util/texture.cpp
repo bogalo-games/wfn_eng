@@ -27,7 +27,7 @@ namespace wfn_eng::vulkan::util {
             );
         }
 
-        VkDeviceSize size = width * height * 4;
+        VkDeviceSize size = width * height * channels;
 
         Buffer staging(
             size,
@@ -42,7 +42,7 @@ namespace wfn_eng::vulkan::util {
         _image = new Image(
             width,
             height,
-            VK_FORMAT_R8G8B8A8_UNORM,
+            channels,
             VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -59,7 +59,7 @@ namespace wfn_eng::vulkan::util {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = _image->handle,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = VK_FORMAT_R8G8B8A8_UNORM,
+            .format = _image->format,
             .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .subresourceRange.baseMipLevel = 0,
             .subresourceRange.levelCount = 1,
