@@ -321,6 +321,12 @@ namespace wfn_eng::vulkan::util {
         std::string vertexShaderPath;
         std::string fragmentShaderPath;
 
+        bool hasUniform;
+
+        std::vector<VkDescriptorPoolSize> descriptorPoolSizes;
+        VkDescriptorSetLayoutBinding descriptorSetLayoutBinding;
+        VkDescriptorImageInfo descriptorImageInfo;
+
         std::vector<RenderPassConfig> renderPassConfigs;
 
         std::vector<VkVertexInputBindingDescription> vertexBindings;
@@ -333,10 +339,17 @@ namespace wfn_eng::vulkan::util {
     // A wrapper around the VkPipeline that constructs a pipeline according to
     // the information provided by a PipelineConfig.
     class Pipeline {
+        VkDescriptorPool _descriptorPool;
+        VkDescriptorSetLayout _descriptorSetLayout;
+        VkDescriptorSet _descriptorSet;
+
         std::vector<VkRenderPass> _renderPasses;
         VkPipelineLayout _layout;
         VkPipeline _handle;
 
+        bool _hasUniform;
+
+        void initDescriptorSet(const PipelineConfig&);
         void initRenderPasses(const PipelineConfig&);
         void initLayout(const PipelineConfig&);
         void initPipeline(const PipelineConfig&);
@@ -360,6 +373,24 @@ namespace wfn_eng::vulkan::util {
         //
         // Destroys the VkRenderPass, VkPipelineLayout, and VkPipeline.
         ~Pipeline();
+
+        ////
+        // VkDescriptorPool& descriptorPool()
+        //
+        // Provides reference to the descriptor pool.
+        VkDescriptorPool& descriptorPool();
+
+        ////
+        // VkDescriptorSetLayout& descriptorSetLayout()
+        //
+        // Provides reference to the descriptor set layout.
+        VkDescriptorSetLayout& descriptorSetLayout();
+
+        ////
+        // VkDescriptorSet& descriptorSet()
+        //
+        // Provides reference to the descriptor set.
+        VkDescriptorSet& descriptorSet();
 
         ////
         // std::vector<VkRenderPass>& renderPasses()

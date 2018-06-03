@@ -7,6 +7,72 @@ namespace wfn_eng::vulkan::util {
     // A wrapper around the VkPipeline that constructs a pipeline according to
     // the information provided by a PipelineConfig.
 
+    void Pipeline::initDescriptorSet(const PipelineConfig& config) {
+        auto& device = Core::instance().device().logical();
+
+        // Creating the descriptor pool
+        VkDescriptorPoolCreateInfo poolInfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .poolSizeCount = static_cast<uint32_t>(config.descriptorPoolSizes.size()),
+            .pPoolSizes = config.descriptorPoolSizes.data(),
+            .maxSets = 1
+        };
+
+        if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &_descriptorPool) != VK_SUCCESS) {
+            throw WfnError(
+                "wfn_eng::vulkan::util::Pipeline",
+                "initDescriptorSet",
+                "Failed to create descriptor pool"
+            );
+        }
+
+        // Creating the descriptor set layout
+        VkDescriptorSetLayoutCreateInfo layoutInfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .bindingCount = 1,
+            .pBindings = &config.descriptorSetLayoutBinding
+        };
+
+        if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS) {
+            throw WfnError(
+                "wfn_eng::vulkan::util::Pipeline",
+                "initDescriptorSet",
+                "Failed to create descriptor set layout"
+            );
+        }
+
+        // Creating the descriptor set
+        VkDescriptorSetAllocateInfo allocInfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .descriptorPool = _descriptorPool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &_descriptorSetLayout
+        };
+
+        if (vkAllocateDescriptorSets(device, &allocInfo, &_descriptorSet) != VK_SUCCESS) {
+            throw WfnError(
+                "wfn_eng::vulkan::util::Pipeline",
+                "initDescriptorSet",
+                "Failed to allocate descriptor set"
+            );
+        }
+
+        // Updating descriptor information
+        VkWriteDescriptorSet descriptorWrite = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = _descriptorSet,
+            .dstBinding = 0,
+            .dstArrayElement = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1,
+            .pBufferInfo = nullptr,
+            .pImageInfo = &config.descriptorImageInfo,
+            .pTexelBufferView = nullptr
+        };
+
+        vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+    }
+
     void Pipeline::initRenderPasses(const PipelineConfig& config) {
         if (config.renderPassConfigs.size() == 0) {
             throw WfnError(
@@ -67,10 +133,13 @@ namespace wfn_eng::vulkan::util {
     void Pipeline::initLayout(const PipelineConfig& config) {
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0; // Optional
-        pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
-        pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-        pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+        if (_hasUniform) {
+            pipelineLayoutInfo.setLayoutCount = 1;
+            pipelineLayoutInfo.pSetLayouts = &_descriptorSetLayout;
+        } else {
+            pipelineLayoutInfo.setLayoutCount = 0;
+            pipelineLayoutInfo.pSetLayouts = VK_NULL_HANDLE;
+        }
 
         if (vkCreatePipelineLayout(Core::instance().device().logical(), &pipelineLayoutInfo, nullptr, &_layout) != VK_SUCCESS) {
             throw WfnError(
@@ -209,6 +278,11 @@ namespace wfn_eng::vulkan::util {
     //
     // Constructs a Pipeline with a custom PipelineConfig.
     Pipeline::Pipeline(PipelineConfig config) {
+        this->_hasUniform = config.hasUniform;
+
+        if (_hasUniform)
+            initDescriptorSet(config);
+
         initRenderPasses(config);
         initLayout(config);
         initPipeline(config);
@@ -227,12 +301,37 @@ namespace wfn_eng::vulkan::util {
     //
     // Destroys the VkRenderPass, VkPipelineLayout, and VkPipeline.
     Pipeline::~Pipeline() {
-        vkDestroyPipeline(Core::instance().device().logical(), _handle, nullptr);
-        vkDestroyPipelineLayout(Core::instance().device().logical(), _layout, nullptr);
+        auto& device = Core::instance().device().logical();
+
+        if (_hasUniform) {
+            vkDestroyDescriptorPool(device, _descriptorPool, nullptr);
+            vkDestroyDescriptorSetLayout(device, _descriptorSetLayout, nullptr);
+        }
+
+        vkDestroyPipeline(device, _handle, nullptr);
+        vkDestroyPipelineLayout(device, _layout, nullptr);
 
         for (auto& renderPass: _renderPasses)
-            vkDestroyRenderPass(Core::instance().device().logical(), renderPass, nullptr);
+            vkDestroyRenderPass(device, renderPass, nullptr);
     }
+
+    ////
+    // VkDescriptorPool& descriptorPool()
+    //
+    // Provides reference to the descriptor pool.
+    VkDescriptorPool& Pipeline::descriptorPool() { return _descriptorPool; }
+
+    ////
+    // VkDescriptorSetLayout& descriptorSetLayout()
+    //
+    // Provides reference to the descriptor set layout.
+    VkDescriptorSetLayout& Pipeline::descriptorSetLayout() { return _descriptorSetLayout; }
+
+    ////
+    // VkDescriptorSet& descriptorSet()
+    //
+    // Provides reference to the descriptor set.
+    VkDescriptorSet& Pipeline::descriptorSet() { return _descriptorSet; }
 
     ////
     // std::vector<VkRenderPass>& renderPasses()

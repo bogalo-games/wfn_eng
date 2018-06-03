@@ -23,14 +23,44 @@ namespace wfn_eng::engine {
     PrimitiveRenderer::PrimitiveRenderer(size_t maxTriangles, size_t maxQuads) {
         auto& core = Core::instance();
 
+        Texture *tex = new Texture("src/textures/texture.jpg");
+
+        // Creating the VkDescriptorPoolSize
+        std::vector<VkDescriptorPoolSize> descriptorPoolSizes {
+            {
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                1
+            }
+        };
+
+        // Creating the VkDescriptorSetLayoutBinding
+        VkDescriptorSetLayoutBinding binding {
+            .binding = 1,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImmutableSamplers = nullptr,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+        };
+
+        // Creating the VkDescriptorImageInfo
+        VkDescriptorImageInfo imageInfo {
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            .imageView = tex->imageView(),
+            .sampler = tex->sampler()
+        };
+
         // Constructing the graphics pipeline
         auto ad = Vertex::getAttributeDescriptions();
         PipelineConfig pipelineConfig {
             .vertexShaderPath = "src/shaders/vert.spv",
             .fragmentShaderPath = "src/shaders/frag.spv",
 
-            .renderPassConfigs = std::vector<RenderPassConfig> { RenderPassConfig { } },
+            .hasUniform = true,
+            .descriptorPoolSizes = descriptorPoolSizes,
+            .descriptorSetLayoutBinding = binding,
+            .descriptorImageInfo = imageInfo,
 
+            .renderPassConfigs = std::vector<RenderPassConfig> { RenderPassConfig { } },
             .vertexBindings = std::vector<VkVertexInputBindingDescription> {
                 Vertex::getBindingDescription()
             },
@@ -129,6 +159,18 @@ namespace wfn_eng::engine {
 
             vkCmdBeginRenderPass(renderCommands[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
             vkCmdBindPipeline(renderCommands[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->handle());
+
+            // Binding the texture
+            vkCmdBindDescriptorSets(
+                renderCommands[i],
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                pipeline->layout(),
+                0,
+                1,
+                &pipeline->descriptorSet(),
+                0,
+                nullptr
+            );
 
             // Rendering triangles
             VkBuffer triangleBufferRef[] = { triangleBuffer->handle };

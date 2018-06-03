@@ -29,6 +29,7 @@ set(HEADERS
 
 set(SOURCES
   src/engine/primitive_renderer.cpp
+  src/engine/vertex.cpp
 
   src/vulkan/util/queue_family_indices.cpp
   src/vulkan/util/swapchain_support.cpp
