@@ -1,7 +1,5 @@
 #include "../util.hpp"
 
-#include <iostream>
-
 namespace wfn_eng::vulkan::util {
     ////
     // struct Image
@@ -127,7 +125,6 @@ namespace wfn_eng::vulkan::util {
             .subresourceRange.layerCount = 1
         };
 
-        std::cout << this->layout << " " << layout << std::endl;
         VkPipelineStageFlags srcStage, dstStage;
         if (this->layout == VK_IMAGE_LAYOUT_UNDEFINED && layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
             barrier.srcAccessMask = 0;
