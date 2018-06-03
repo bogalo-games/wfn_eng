@@ -23,7 +23,7 @@ namespace wfn_eng::engine {
     PrimitiveRenderer::PrimitiveRenderer(size_t maxTriangles, size_t maxQuads) {
         auto& core = Core::instance();
 
-        Texture *tex = new Texture("src/textures/texture.jpg");
+        texture = new Texture("src/textures/texture.jpg");
 
         // Creating the VkDescriptorPoolSize
         std::vector<VkDescriptorPoolSize> descriptorPoolSizes {
@@ -45,8 +45,8 @@ namespace wfn_eng::engine {
         // Creating the VkDescriptorImageInfo
         VkDescriptorImageInfo imageInfo {
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            .imageView = tex->imageView(),
-            .sampler = tex->sampler()
+            .imageView = texture->imageView(),
+            .sampler = texture->sampler()
         };
 
         // Constructing the graphics pipeline
@@ -323,6 +323,7 @@ namespace wfn_eng::engine {
         delete indexBuffer;
         delete indexTransferBuffer;
         delete pipeline;
+        delete texture;
     }
 
     void PrimitiveRenderer::drawTriangle(std::array<Vertex, 3> vert) {

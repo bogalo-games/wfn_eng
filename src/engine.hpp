@@ -39,6 +39,8 @@ namespace wfn_eng::engine {
     };
 
     class PrimitiveRenderer {
+        Texture *texture;
+
         Pipeline *pipeline;
 
         Buffer *triangleBuffer;
