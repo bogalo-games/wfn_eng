@@ -183,5 +183,7 @@ namespace wfn_eng::vulkan::util {
                 "Failed to wait for queue idle"
             );
         }
+
+        this->layout = layout;
     }
 }
