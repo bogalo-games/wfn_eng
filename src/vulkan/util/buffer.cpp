@@ -215,7 +215,7 @@ namespace wfn_eng::vulkan::util {
             .imageSubresource.mipLevel = 0,
             .imageSubresource.baseArrayLayer = 0,
             .imageSubresource.layerCount = 1,
-            .imageOffset = { 0, 0, 0 },
+            .imageOffset = dstOffset,
             .imageExtent = {
                 image.width,
                 image.height,
