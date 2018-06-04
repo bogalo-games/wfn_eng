@@ -9,8 +9,10 @@
 #include <functional>
 #include <stdexcept>
 #include <iostream>
+#include <unistd.h>
 #include <cstdlib>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <array>
 #include <cmath>
@@ -142,7 +144,8 @@ private:
             if (up)   dy -= 1;
             if (down) dy += 1;
 
-            pos += glm::vec2(dx, dy) * ((curr - last) / 1000.0f);
+            int dt = (curr - last);
+            pos += glm::vec2(dx, dy) * (dt / 1000.f);
 
             if (quit == true)
                 break;
@@ -150,8 +153,6 @@ private:
             updatePosition(pos, curr);
             renderer->render();
             last = curr;
-
-            SDL_Delay(16);
         }
 
         vkDeviceWaitIdle(Core::instance().device().logical());
@@ -165,7 +166,37 @@ public:
     }
 };
 
+////
+// void configEnv()
+//
+// Configures environment variables for macOS.
+void configEnv() {
+    // TODO: Make this cross platform
+    char cwd[FILENAME_MAX];
+    getcwd(cwd, FILENAME_MAX);
+
+    std::stringstream pathBuilder;
+
+    pathBuilder << cwd << "/vulkan/macOS/etc/vulkan/icd.d/MoltenVK_icd.json";
+    std::string icd = pathBuilder.str();
+
+    pathBuilder.str(std::string());
+
+    pathBuilder << cwd << "/vulkan/macOS/etc/vulkan/explicit_layer.d";
+    std::string lyr = pathBuilder.str();
+
+    // TODO: Why does setting ICD... break things?
+    // setenv("VK_ICD_FILENAMES", icd.c_str(), true);
+    setenv("VK_LAYER_PATH",    lyr.c_str(), true);
+}
+
+////
+// int main()
+//
+// Entry point for the application.
 int main() {
+    configEnv();
+
     HelloTriangleApplication app;
     try {
         app.run();
