@@ -68,7 +68,7 @@ private:
         };
 
         window = new Window(cfg);
-        Core::initialize(*window);
+        Core::initialize(*window, true);
 
         renderer = new PrimitiveRenderer(1, 1);
     }

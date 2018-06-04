@@ -58,7 +58,8 @@ target_link_libraries(
     wfn_eng
     ${SDL2_LIBRARIES}
     MoltenVK
-    vulkan
+    vulkan.1.1.73
+    vulkan.1
 )
 
 add_custom_command(TARGET ${PROJECT_NAME}

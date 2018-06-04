@@ -17,12 +17,12 @@ namespace wfn_eng::vulkan {
     Core *Core::_core = nullptr;
 
     ////
-    // Core(wnf_eng::sdl::Window&)
+    // Core(wff_eng::sdl::Window&, bool)
     //
     // Constructs the Base, Device, and Swapchain, given reference to an SDL
     // window wrapper.
-    Core::Core(wfn_eng::sdl::Window& window) {
-        _base = new Base(window);
+    Core::Core(wfn_eng::sdl::Window& window, bool debugging) {
+        _base = new Base(window, debugging);
         _device = new Device(base());
         _swapchain = new Swapchain(base(), device());
         _commandPools = new CommandPools(base(), device());
@@ -97,10 +97,11 @@ namespace wfn_eng::vulkan {
     CommandPools& Core::commandPools() { return *_commandPools; }
 
     ////
-    // void initialize(sdl::Window)
+    // void initialize(sdl::Window, bool)
     //
-    // Initializes the Core given reference to an SDL window.
-    void Core::initialize(sdl::Window& window) {
+    // Initializes the Core given reference to an SDL window with the option
+    // for debugging.
+    void Core::initialize(sdl::Window& window, bool debugging) {
         if (_core != nullptr) {
             throw WfnError(
                 "wfn_eng::vulkan::Core",
@@ -109,6 +110,14 @@ namespace wfn_eng::vulkan {
             );
         }
 
-        _core = new Core(window);
+        _core = new Core(window, debugging);
+    }
+
+    ////
+    // void initialize(sdl::Window)
+    //
+    // Initializes the Core given reference to an SDL window.
+    void Core::initialize(sdl::Window& window) {
+        initialize(window, false);
     }
 }

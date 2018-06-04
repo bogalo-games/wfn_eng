@@ -1,5 +1,6 @@
 #include "../vulkan.hpp"
 
+#include <iostream>
 #include <set>
 
 #include "util.hpp"
@@ -78,6 +79,12 @@ namespace wfn_eng::vulkan {
                 "makePhysicalDevice",
                 "No suitable GPUs"
             );
+        }
+
+        if (base.debuggingEnabled()) {
+            VkPhysicalDeviceProperties props;
+            vkGetPhysicalDeviceProperties(_physical, &props);
+            std::cout << "Selected: " << props.deviceName << std::endl;
         }
     }
 

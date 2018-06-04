@@ -5,25 +5,11 @@
 #include <cstring>
 
 ////
-// NOTE: Comment this line out to disable the request for validation layers.
-#define ENABLE_VALIDATION_LAYERS
-
-#ifdef ENABLE_VALIDATION_LAYERS
-
-////
-// std::vector<const char *> validationLayers
-//
-// A list of validation layers to request.
-std::vector<const char *> validationLayers {
-    "VK_LAYER_LUNARG_standard_validation"
-};
-
-////
 // bool checkValidationLayerSupport()
 //
 // Checks if all of the layers requested via validationLayers are supported on
 // the current platform.
-static bool checkValidationLayerSupport() {
+static bool checkValidationLayerSupport(const std::vector<const char *>& validationLayers) {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -46,7 +32,13 @@ static bool checkValidationLayerSupport() {
     return true;
 }
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+////
+// VkBool32 debugCallbackFn(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT,
+//                          uint64_t, size_t, int32_t, const char*,
+//                          const char *, void *)
+//
+// Callback function for validation layer debugging.
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallbackFn(
         VkDebugReportFlagsEXT flags,
         VkDebugReportObjectTypeEXT objType,
         uint64_t obj,
@@ -58,7 +50,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     std::cerr << "Validation Layer: " << msg << std::endl;
     return VK_FALSE;
 }
-#endif
 
 ////
 // std::vector<const char *> getRequiredExtensions(wfn_eng::sdl::Window&)
@@ -89,19 +80,22 @@ namespace wfn_eng::vulkan {
     // the VkSurfaceKHR.
 
     ////
-    // Base(sdl::Window&)
+    // Base(sdl::Window&, bool)
     //
     // Construct the base of the Vulkan instance (VkInstance and
-    // VkSurfaceKHR) from an SDL window wrapper.
-    Base::Base(sdl::Window& window) {
-        #ifdef ENABLE_VALIDATION_LAYERS
-        bool _debugSupport = checkValidationLayerSupport();
-        if (!_debugSupport) {
-            std::cout << "Validation layers were requested but are unsupported:" << std::endl;
-            for (auto& str: validationLayers)
-                std::cout << "  - " << str << std::endl;
-        }
-        #endif
+    // VkSurfaceKHR) from an SDL window wrapper with the option to provide
+    // debugging.
+    Base::Base(sdl::Window& window, bool debugging) {
+        _debuggingEnabled = debugging;
+        if (_debuggingEnabled) {
+            _layersEnabled = checkValidationLayerSupport(validationLayers);
+            if (!_layersEnabled) {
+                std::cerr << "Validation layers were requested but are unsupported:" << std::endl;
+                for (auto& layer: validationLayers)
+                    std::cout << "  - " << layer << std::endl;
+            }
+        } else
+            _layersEnabled = false;
 
         VkApplicationInfo appInfo = {};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -114,17 +108,12 @@ namespace wfn_eng::vulkan {
         VkInstanceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         createInfo.pApplicationInfo = &appInfo;
-        #ifdef ENABLE_VALIDATION_LAYERS
-        if (_debugSupport) {
+        if (_layersEnabled) {
             createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
             createInfo.ppEnabledLayerNames = validationLayers.data();
         }
 
-        auto reqExts = getRequiredExtensions(window, _debugSupport);
-        #else
-        auto reqExts = getRequiredExtensions(window, false);
-        #endif
-
+        auto reqExts = getRequiredExtensions(window, _layersEnabled);
         createInfo.enabledExtensionCount = static_cast<uint32_t>(reqExts.size());
         createInfo.ppEnabledExtensionNames = reqExts.data();
 
@@ -144,12 +133,11 @@ namespace wfn_eng::vulkan {
             );
         }
 
-        #ifdef ENABLE_VALIDATION_LAYERS
-        if (_debugSupport) {
+        if (_layersEnabled) {
             VkDebugReportCallbackCreateInfoEXT callbackInfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
                 .flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT,
-                .pfnCallback = debugCallback
+                .pfnCallback = debugCallbackFn
             };
 
             auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(_instance, "vkCreateDebugReportCallbackEXT");
@@ -162,8 +150,15 @@ namespace wfn_eng::vulkan {
             } else
                 func(_instance, &callbackInfo, nullptr, &_debugCallback);
         }
-        #endif
     }
+
+    ////
+    // Base(sdl::Window&)
+    //
+    // Construct the base of the Vulkan instance (VkInstance and
+    // VkSurfaceKHR) from an SDL window wrapper.
+    Base::Base(sdl::Window& window) :
+            Base(window, false) { }
 
     ////
     // ~Base()
@@ -171,7 +166,7 @@ namespace wfn_eng::vulkan {
     // Destroying the VkInstance and VkSurfaceKHR.
     Base::~Base() {
         #ifdef ENABLE_VALIDATION_LAYERS
-        if (_debugSupport) {
+        if (_debugging) {
             auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(_instance, "vkDestroyDebugReportCallbackEXT");
             if (func != nullptr)
                 func(_instance, _debugCallback, nullptr);
@@ -193,4 +188,22 @@ namespace wfn_eng::vulkan {
     //
     // Provides access to the VkSurfaceKHR.
     VkSurfaceKHR& Base::surface() { return _surface; }
+
+    ////
+    // bool layersEnabled
+    //
+    // Returns whether or not debug layers are enabled.
+    bool Base::layersEnabled() { return _layersEnabled; }
+
+    ////
+    // bool debuggingEnabled()
+    //
+    // Returns whether or not debugging is enabled.
+    bool Base::debuggingEnabled() { return _debuggingEnabled; }
+
+    ////
+    // VkDebugReportCallbackEXT& debugCallback()
+    //
+    // Return the debugging callback, if debugging is enabled.
+    VkDebugReportCallbackEXT& Base::debugCallback() { return _debugCallback; }
 }

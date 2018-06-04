@@ -17,13 +17,26 @@ namespace wfn_eng::vulkan {
         VkInstance _instance;
         VkSurfaceKHR _surface;
 
-        bool _debugSupport;
+        bool _layersEnabled;
+        bool _debuggingEnabled;
         VkDebugReportCallbackEXT _debugCallback;
 
     public:
         inline static const std::vector<const char *> deviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
+
+        inline static const std::vector<const char *> validationLayers = {
+            "VK_LAYER_LUNARG_standard_validation"
+        };
+
+        ////
+        // Base(sdl::Window&, bool)
+        //
+        // Construct the base of the Vulkan instance (VkInstance and
+        // VkSurfaceKHR) from an SDL window wrapper with the option to provide
+        // debugging.
+        Base(sdl::Window&, bool);
 
         ////
         // Base(sdl::Window&)
@@ -49,6 +62,24 @@ namespace wfn_eng::vulkan {
         //
         // Provides access to the VkSurfaceKHR.
         VkSurfaceKHR& surface();
+
+        ////
+        // bool layersEnabled
+        //
+        // Returns whether or not debug layers are enabled.
+        bool layersEnabled();
+
+        ////
+        // bool debuggingEnabled()
+        //
+        // Returns whether or not debugging is enabled.
+        bool debuggingEnabled();
+
+        ////
+        // VkDebugReportCallbackEXT& debugCallback()
+        //
+        // Return the debugging callback, if debugging is enabled.
+        VkDebugReportCallbackEXT& debugCallback();
 
 
         // Following Rule of 5's
@@ -290,11 +321,11 @@ namespace wfn_eng::vulkan {
         CommandPools *_commandPools;
 
         ////
-        // Core(wnf_eng::sdl::Window&)
+        // Core(wfn_eng::sdl::Window&, bool)
         //
         // Constructs the Base, Device, and Swapchain, given reference to an SDL
-        // window wrapper.
-        Core(wfn_eng::sdl::Window&);
+        // window wrapper with the option to provide debugging.
+        Core(wfn_eng::sdl::Window&, bool);
 
         ////
         // ~Core()
@@ -309,6 +340,13 @@ namespace wfn_eng::vulkan {
         static Core *_core;
 
     public:
+        ////
+        // void initialize(sdl::Window, bool)
+        //
+        // Initializes the Core given reference to an SDL window with the option
+        // for debugging.
+        static void initialize(sdl::Window&, bool);
+
         ////
         // void initialize(sdl::Window)
         //
