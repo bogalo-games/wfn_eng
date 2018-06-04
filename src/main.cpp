@@ -185,8 +185,7 @@ void configEnv() {
     pathBuilder << cwd << "/vulkan/macOS/etc/vulkan/explicit_layer.d";
     std::string lyr = pathBuilder.str();
 
-    // TODO: Why does setting ICD... break things?
-    // setenv("VK_ICD_FILENAMES", icd.c_str(), true);
+    setenv("VK_ICD_FILENAMES", icd.c_str(), true);
     setenv("VK_LAYER_PATH",    lyr.c_str(), true);
 }
 

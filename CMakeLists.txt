@@ -57,7 +57,6 @@ add_executable(wfn_eng ${SOURCES} ${HEADERS})
 target_link_libraries(
     wfn_eng
     ${SDL2_LIBRARIES}
-    MoltenVK
     vulkan.1.1.73
     vulkan.1
 )

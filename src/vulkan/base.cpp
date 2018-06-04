@@ -64,10 +64,8 @@ static std::vector<const char *> getRequiredExtensions(wfn_eng::sdl::Window& win
 
     std::vector<const char *> exts(pNames, pNames + sdlExtCount);
 
-    #ifdef ENABLE_VALIDATION_LAYERS
     if (vlSupp)
         exts.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-    #endif
 
     return exts;
 }
