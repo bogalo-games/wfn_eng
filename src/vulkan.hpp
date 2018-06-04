@@ -17,6 +17,9 @@ namespace wfn_eng::vulkan {
         VkInstance _instance;
         VkSurfaceKHR _surface;
 
+        bool _debugSupport;
+        VkDebugReportCallbackEXT _debugCallback;
+
     public:
         inline static const std::vector<const char *> deviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
