@@ -24,7 +24,7 @@ namespace wfn_eng::vulkan::util {
             size,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            VK_SHARING_MODE_CONCURRENT
+            Core::instance().device().requiredSharingMode()
         );
 
         stagingBuffer.copy_from(value);

@@ -75,21 +75,21 @@ namespace wfn_eng::engine {
             maxTriangles * triangleSize(),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            VK_SHARING_MODE_CONCURRENT
+            core.device().requiredSharingMode()
         );
 
         quadBuffer = new Buffer(
             maxQuads * quadSize(),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            VK_SHARING_MODE_CONCURRENT
+            core.device().requiredSharingMode()
         );
 
         indexBuffer = new Buffer(
             maxQuads * indexSize(),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            VK_SHARING_MODE_CONCURRENT
+            core.device().requiredSharingMode()
         );
 
         // Constructing the transfer buffers
@@ -97,21 +97,21 @@ namespace wfn_eng::engine {
             maxTriangles * triangleSize(),
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            VK_SHARING_MODE_CONCURRENT
+            core.device().requiredSharingMode()
         );
 
         quadTransferBuffer = new Buffer(
             maxQuads * quadSize(),
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            VK_SHARING_MODE_CONCURRENT
+            core.device().requiredSharingMode()
         );
 
         indexTransferBuffer = new Buffer(
             maxQuads * indexSize(),
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            VK_SHARING_MODE_CONCURRENT
+            core.device().requiredSharingMode()
         );
 
         // Constructing render commands

@@ -134,6 +134,10 @@ namespace wfn_eng::vulkan {
             );
         }
 
+        _graphicsQueueIndex = indices.graphicsFamily;
+        _presentationQueueIndex = indices.presentationFamily;
+        _transferQueueIndex = indices.transferFamily;
+
         vkGetDeviceQueue(
             logical(),
             indices.graphicsFamily,
@@ -202,4 +206,16 @@ namespace wfn_eng::vulkan {
     //
     // Getting the transfer queue.
     VkQueue& Device::transferQueue() { return _transferQueue; }
+
+    ////
+    // VkSharingMode requiredSharingMode()
+    //
+    // Returns the required sharing mode, depending on whether the graphics
+    // and transfer queues are separate.
+    VkSharingMode Device::requiredSharingMode() {
+        if (_graphicsQueueIndex == _transferQueueIndex)
+            return VK_SHARING_MODE_EXCLUSIVE;
+        else
+            return VK_SHARING_MODE_CONCURRENT;
+    }
 }

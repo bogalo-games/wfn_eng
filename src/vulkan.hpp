@@ -97,6 +97,9 @@ namespace wfn_eng::vulkan {
     class Device {
         VkPhysicalDevice _physical;
         VkDevice _logical;
+        int _graphicsQueueIndex;
+        int _presentationQueueIndex;
+        int _transferQueueIndex;
         VkQueue _graphicsQueue;
         VkQueue _presentationQueue;
         VkQueue _transferQueue;
@@ -156,6 +159,13 @@ namespace wfn_eng::vulkan {
         //
         // Getting the transfer queue.
         VkQueue& transferQueue();
+
+        ////
+        // VkSharingMode requiredSharingMode()
+        //
+        // Returns the required sharing mode, depending on whether the graphics
+        // and transfer queues are separate.
+        VkSharingMode requiredSharingMode();
 
 
         // Following Rule of 5's

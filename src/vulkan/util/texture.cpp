@@ -28,12 +28,13 @@ namespace wfn_eng::vulkan::util {
         }
 
         VkDeviceSize size = width * height * channels;
+        VkSharingMode sharingMode = Core::instance().device().requiredSharingMode();
 
         Buffer staging(
             size,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            VK_SHARING_MODE_CONCURRENT
+            sharingMode
         );
 
         staging.copy_from(pixels);
@@ -46,7 +47,7 @@ namespace wfn_eng::vulkan::util {
             VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            VK_SHARING_MODE_CONCURRENT
+            sharingMode
         );
 
         _image->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);

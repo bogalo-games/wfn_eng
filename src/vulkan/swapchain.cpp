@@ -100,13 +100,11 @@ namespace wfn_eng::vulkan {
         };
 
         if (indices.graphicsFamily != indices.presentationFamily) {
-            createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
             createInfo.queueFamilyIndexCount = 2;
             createInfo.pQueueFamilyIndices = queueFamilyIndices;
-        } else {
-            createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         }
 
+        createInfo.imageSharingMode = device.requiredSharingMode();
         createInfo.preTransform = swapchainSupport.capabilities.currentTransform;
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         createInfo.presentMode = presentMode;
