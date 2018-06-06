@@ -57,6 +57,8 @@ namespace wfn_eng::vulkan::util {
             );
         }
 
+        // TODO: Add binding 0?
+
         // Updating descriptor information
         VkWriteDescriptorSet descriptorWrite = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,

@@ -35,7 +35,7 @@ namespace wfn_eng::engine {
 
         // Creating the VkDescriptorSetLayoutBinding
         VkDescriptorSetLayoutBinding binding {
-            .binding = 1,
+            .binding = 0,
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .pImmutableSamplers = nullptr,
