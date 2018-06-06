@@ -260,7 +260,9 @@ namespace wfn_eng::vulkan {
     // VkDevice, which is included in this class for that purpose.
     Swapchain::~Swapchain() {
         vkDestroyRenderPass(device, _renderPass, nullptr);
-        for (auto imageView: _imageViews)
+        for (auto& frameBuffer: _frameBuffers)
+            vkDestroyFramebuffer(device, frameBuffer, nullptr);
+        for (auto& imageView: _imageViews)
             vkDestroyImageView(device, imageView, nullptr);
         vkDestroySwapchainKHR(device, _swapchain, nullptr);
     }
