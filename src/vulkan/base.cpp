@@ -163,13 +163,11 @@ namespace wfn_eng::vulkan {
     //
     // Destroying the VkInstance and VkSurfaceKHR.
     Base::~Base() {
-        #ifdef ENABLE_VALIDATION_LAYERS
-        if (_debugging) {
+        if (_layersEnabled) {
             auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(_instance, "vkDestroyDebugReportCallbackEXT");
             if (func != nullptr)
                 func(_instance, _debugCallback, nullptr);
         }
-        #endif
 
         vkDestroySurfaceKHR(_instance, _surface, nullptr);
         vkDestroyInstance(_instance, nullptr);
