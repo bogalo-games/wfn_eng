@@ -22,6 +22,7 @@ include_directories(
 
 set(HEADERS
   src/engine/primitive_renderer.hpp
+  src/engine/message_bus.hpp
   src/engine/vertex.hpp
 
   src/engine.hpp
@@ -36,6 +37,7 @@ set(HEADERS
 
 set(SOURCES
   src/engine/primitive_renderer.cpp
+  src/engine/message_bus.cpp
   src/engine/vertex.cpp
 
   src/vulkan/util/queue_family_indices.cpp
