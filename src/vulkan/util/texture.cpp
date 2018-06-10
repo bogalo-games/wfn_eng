@@ -77,11 +77,11 @@ namespace wfn_eng::vulkan::util {
         }
     }
 
-    void Texture::createSampler() {
+    void Texture::createSampler(VkFilter filter) {
         VkSamplerCreateInfo createInfo = {
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .magFilter = VK_FILTER_LINEAR,
-            .minFilter = VK_FILTER_LINEAR,
+            .magFilter = filter,
+            .minFilter = filter,
             .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
             .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
             .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
@@ -105,14 +105,22 @@ namespace wfn_eng::vulkan::util {
     }
 
     ////
+    // Texture(std::string, VkFilter)
+    //
+    // Builds a texture from a path on disk, and provides the option of
+    // VkFilter for both the mag and min filter.
+    Texture::Texture(std::string path, VkFilter filter) {
+        createImage(path);
+        createImageView();
+        createSampler(filter);
+    }
+
+    ////
     // Texture(std::string)
     //
     // Builds a texture from a path on disk.
-    Texture::Texture(std::string path) {
-        createImage(path);
-        createImageView();
-        createSampler();
-    }
+    Texture::Texture(std::string path) :
+            Texture(path, VK_FILTER_NEAREST) { }
 
     ////
     // ~Texture()

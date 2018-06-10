@@ -435,9 +435,16 @@ namespace wfn_eng::vulkan::util {
 
         void createImage(std::string);
         void createImageView();
-        void createSampler();
+        void createSampler(VkFilter);
 
     public:
+        ////
+        // Texture(std::string, VkFilter)
+        //
+        // Builds a texture from a path on disk, and provides the option of
+        // VkFilter for both the mag and min filter.
+        Texture(std::string, VkFilter);
+
         ////
         // Texture(std::string)
         //
