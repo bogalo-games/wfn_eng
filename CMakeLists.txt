@@ -21,10 +21,17 @@ include_directories(
 )
 
 set(HEADERS
+  src/engine/primitive_renderer.hpp
+  src/engine/vertex.hpp
+
+  src/engine.hpp
+
   src/vulkan/util.hpp
   src/vulkan.hpp
-  src/error.hpp
+
   src/sdl.hpp
+
+  src/error.hpp
 )
 
 set(SOURCES
@@ -49,6 +56,7 @@ set(SOURCES
   src/sdl/window.cpp
 
   src/error.cpp
+
   src/main.cpp
 )
 

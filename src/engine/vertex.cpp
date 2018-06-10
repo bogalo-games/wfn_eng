@@ -1,4 +1,4 @@
-#include "../engine.hpp"
+#include "vertex.hpp"
 
 namespace wfn_eng::engine {
     ////
